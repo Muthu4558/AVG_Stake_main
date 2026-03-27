@@ -28,7 +28,8 @@ import {
   getAllDirectIncome,
   getAllLevelIncome,
   getAdminDashboard,
-  getAdminWallet
+  getAdminWallet,
+  getMyTeamBusiness
 } from "../controllers/userController.js";
 import { verifyToken, isAdmin } from "../middleware/authMiddleware.js";
 
@@ -92,6 +93,9 @@ router.get("/admin/dashboard", verifyToken, isAdmin, getAdminDashboard);
 
 // admin wallet topbar
 router.get("/admin/wallet", verifyToken, isAdmin, getAdminWallet);
+
+// team business
+router.get("/my-team-business", verifyToken, getMyTeamBusiness);
 
 // ✅ 3. ADMIN ACTIONS (dynamic routes LAST)
 router.put("/:id/status", verifyToken, isAdmin, updateUserStatus);

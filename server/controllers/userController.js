@@ -81,7 +81,7 @@ export const deleteUser = async (req, res) => {
     console.error("deleteUser error:", err);
     res.status(500).json({ error: err.message });
   }
-};  
+};
 
 /* GET MY PROFILE */
 export const getMyProfile = async (req, res) => {
@@ -982,6 +982,42 @@ export const getAdminWallet = async (req, res) => {
 
   } catch (err) {
     console.error("admin wallet error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+export const getMyTeamBusiness = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const result = await pool.query(
+      `
+      WITH RECURSIVE team AS (
+        SELECT id FROM users WHERE id = $1
+
+        UNION ALL
+
+        SELECT u.id
+        FROM users u
+        JOIN team t ON u.referred_by::int = t.id
+      )
+
+      SELECT 
+        COALESCE(SUM(amount),0) AS total_business,
+        COALESCE(SUM(amount) FILTER (WHERE DATE(created_at)=CURRENT_DATE),0) AS today_business
+      FROM user_plans
+      WHERE user_id IN (SELECT id FROM team)
+      `,
+      [userId]
+    );
+
+    res.json({
+      teamBusiness: Number(result.rows[0].total_business),
+      todayBusiness: Number(result.rows[0].today_business),
+    });
+
+  } catch (err) {
+    console.error("getMyTeamBusiness error:", err);
     res.status(500).json({ error: err.message });
   }
 };

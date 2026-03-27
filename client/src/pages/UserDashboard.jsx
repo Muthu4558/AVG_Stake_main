@@ -63,11 +63,12 @@ const UserDashboard = () => {
           withdrawRes,
           referralsRes,
           networkRes,
-          depositRes
+          depositRes,
+          teamBusinessRes // ✅ NEW API
         ] = await Promise.all([
           axios.get("http://localhost:5000/api/user-plans/my-total-roi", {
-    headers: { Authorization: `Bearer ${token}` },
-  }),
+            headers: { Authorization: `Bearer ${token}` },
+          }),
           axios.get("http://localhost:5000/api/withdrawals/summary", {
             headers: { Authorization: `Bearer ${token}` },
           }),
@@ -83,14 +84,17 @@ const UserDashboard = () => {
           axios.get("http://localhost:5000/api/users/my-deposits-stats", {
             headers: { Authorization: `Bearer ${token}` },
           }),
+          axios.get("http://localhost:5000/api/users/my-team-business", {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
         ]);
 
         // ✅ WALLET
         setWallet({
-  roi: roiRes.data.roi || 0, // 🔥 CORRECT ROI FROM PORTFOLIO
-  level: summaryRes.data.level || 0,
-  direct: summaryRes.data.directReferral || 0,
-});
+          roi: roiRes.data.roi || 0,
+          level: summaryRes.data.level || 0,
+          direct: summaryRes.data.directReferral || 0,
+        });
 
         // ✅ WITHDRAW STATS
         const withdrawals = withdrawRes.data || [];
@@ -112,7 +116,7 @@ const UserDashboard = () => {
           0
         );
 
-        // ✅ DEPOSITS (FIXED 🔥)
+        // ✅ DEPOSITS
         const totalDeposits = Number(depositRes.data.total_count || 0);
         const totalDepositAmount = Number(depositRes.data.total_amount || 0);
         const todayDeposits = Number(depositRes.data.today_count || 0);
@@ -121,27 +125,24 @@ const UserDashboard = () => {
         // ✅ REFERRALS
         const directCount = referralsRes.data.length;
 
-        // ✅ NETWORK TREE COUNT + BUSINESS
-        const calcTree = (node) => {
-          if (!node || !node.children) return { count: 0, business: 0 };
+        // ✅ NETWORK COUNT ONLY (NOT BUSINESS)
+        const calcCount = (node) => {
+          if (!node || !node.children) return 0;
 
           let count = node.children.length;
-          let business = 0;
 
           node.children.forEach((child) => {
-            business += Number(child.wallet || 0); // 🔥 if later you store amount
-            const sub = calcTree(child);
-            count += sub.count;
-            business += sub.business;
+            count += calcCount(child);
           });
 
-          return { count, business };
+          return count;
         };
 
-        const treeData = calcTree(networkRes.data);
+        const teamCount = calcCount(networkRes.data);
 
+        // ✅ FINAL STATS
         setStats({
-          staking: totalDepositAmount, // 🔥 total staking = deposits
+          staking: totalDepositAmount,
           totalDeposits,
           totalDepositAmount,
           todayDeposits,
@@ -151,9 +152,11 @@ const UserDashboard = () => {
           todayWithdraw,
           todayWithdrawAmount,
           directCount,
-          teamCount: treeData.count,
-          teamBusiness: treeData.business,
-          todayBusiness: todayDepositAmount, // 🔥 simple logic
+          teamCount,
+
+          // 🔥 REAL BUSINESS (FROM BACKEND)
+          teamBusiness: teamBusinessRes.data.teamBusiness,
+          todayBusiness: teamBusinessRes.data.todayBusiness,
         });
 
       } catch (err) {
@@ -166,15 +169,12 @@ const UserDashboard = () => {
 
   return (
     <div className="dashboard">
-
       <Sidebar isOpen={isOpen} setIsOpen={setIsOpen} />
 
       <div className="main">
-
         <Topbar isOpen={isOpen} setIsOpen={setIsOpen} />
 
         <div className="content">
-
           <h2 className="page-title">Dashboard</h2>
           <span>Overview of your account activity</span>
 
@@ -195,7 +195,6 @@ const UserDashboard = () => {
 
           <h4 className="section-title">Transactions Overview</h4>
           <div className="grid grid-2">
-
             <div className="box">
               <div className="box-header">
                 <h3>Deposits Overview</h3>
@@ -223,18 +222,15 @@ const UserDashboard = () => {
                 <div className="mini-card"><p>Today Amount</p><h4>${stats.todayWithdrawAmount}</h4></div>
               </div>
             </div>
-
           </div>
 
           <h4 className="section-title">Business & Team</h4>
           <div className="grid grid-4">
             <StatCard title="Direct Referrals" value={stats.directCount} icon={<FaUsers />} />
             <StatCard title="Team Count" value={stats.teamCount} icon={<FaUsers />} />
-            {/* <StatCard title="Team Business" value={`$${stats.teamBusiness}`} icon={<FaBolt />} /> */}
-            <StatCard title="Team Business" value={0} icon={<FaBolt />} />
+            <StatCard title="Team Business" value={`$${stats.teamBusiness}`} icon={<FaBolt />} />
             <StatCard title="Today Business" value={`$${stats.todayBusiness}`} icon={<FaBolt />} />
           </div>
-
         </div>
       </div>
     </div>
