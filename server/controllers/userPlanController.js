@@ -1,0 +1,563 @@
+import { pool } from "../config/db.js";
+
+const parseNumber = (value, fallback = 0) => {
+  if (value === null || value === undefined) return fallback;
+  const match = String(value).match(/[\d.]+/);
+  const num = match ? parseFloat(match[0]) : Number(value);
+  return Number.isFinite(num) ? num : fallback;
+};
+
+const getCeilingMultiplier = (plan) => {
+  const raw = plan.ceiling_limit ?? plan.ceilingLimit ?? "2X";
+  const mult = parseNumber(raw, 2);
+  return mult > 0 ? mult : 2;
+};
+
+const getCreditedPlanId = async (userId) => {
+  let result = await pool.query(
+    `SELECT id
+     FROM user_plans
+     WHERE user_id = $1 AND status = 'active'
+     ORDER BY id DESC
+     LIMIT 1`,
+    [userId]
+  );
+
+  if (!result.rows.length) {
+    result = await pool.query(
+      `SELECT id
+       FROM user_plans
+       WHERE user_id = $1
+       ORDER BY id DESC
+       LIMIT 1`,
+      [userId]
+    );
+  }
+
+  return result.rows[0]?.id || null;
+};
+
+const insertEarning = async ({
+  receiverUserId,
+  fromUserId,
+  sourceUserPlanId,
+  amount,
+  percentage,
+  level,
+  incomeType,
+}) => {
+  const creditedUserPlanId = await getCreditedPlanId(receiverUserId);
+  if (!creditedUserPlanId) return;
+
+  await pool.query(
+    `
+    INSERT INTO level_income
+      (user_id, from_user_id, user_plan_id, credited_user_plan_id, level, amount, percentage, income_type)
+    VALUES
+      ($1, $2, $3, $4, $5, $6, $7, $8)
+    `,
+    [
+      receiverUserId,
+      fromUserId,
+      sourceUserPlanId,
+      creditedUserPlanId,
+      level,
+      amount,
+      percentage,
+      incomeType,
+    ]
+  );
+};
+
+/* BUY PLAN */
+export const buyPlan = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { planId, amount } = req.body;
+
+    if (!planId || !amount) {
+      return res.status(400).json({ message: "Missing data" });
+    }
+
+    const numericAmount = Number(amount);
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      return res.status(400).json({ message: "Amount must be greater than 0" });
+    }
+
+    const planRes = await pool.query(
+      "SELECT * FROM plans WHERE id = $1",
+      [planId]
+    );
+
+    if (!planRes.rows.length) {
+      return res.status(404).json({ message: "Plan not found" });
+    }
+
+    const plan = planRes.rows[0];
+
+    const minAmount = parseNumber(plan.min_amount, 0);
+    const maxAmount = parseNumber(plan.max_amount, Infinity);
+
+    if (numericAmount < minAmount || numericAmount > maxAmount) {
+      return res.status(400).json({
+        message: `Amount must be between ${minAmount} and ${maxAmount}`,
+      });
+    }
+
+    const roiPercent = parseNumber(plan.roi, 0);
+    const ceilingMultiplier = getCeilingMultiplier(plan);
+    const dailyROI = (numericAmount * roiPercent) / 100;
+    const maxReturn = numericAmount * ceilingMultiplier;
+
+    await pool.query("BEGIN");
+
+    const result = await pool.query(
+      `INSERT INTO user_plans
+        (user_id, plan_id, amount, daily_roi, status)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING *`,
+      [userId, planId, numericAmount, dailyROI, "active"]
+    );
+
+    const insertedPlan = result.rows[0];
+
+    // 1) Direct income goes to the immediate referrer
+    const directRes = await pool.query(
+      "SELECT referred_by FROM users WHERE id = $1",
+      [userId]
+    );
+
+    const directParentId = directRes.rows[0]?.referred_by || null;
+
+    // Use the plan's direct referral percent
+    const directReferralPercent = parseNumber(
+      plan.direct_referral ?? plan.direct_referral_percent ?? 0,
+      0
+    );
+
+    if (directParentId && directReferralPercent > 0) {
+      const directReferralAmount =
+        (numericAmount * directReferralPercent) / 100;
+
+      await insertEarning({
+        receiverUserId: directParentId,
+        fromUserId: userId,
+        sourceUserPlanId: insertedPlan.id,
+        amount: directReferralAmount,
+        percentage: directReferralPercent,
+        level: 0,
+        incomeType: "direct",
+      });
+    }
+
+    // 2) Level income: level 1 = direct referrer, level 2 = referrer's referrer, etc.
+    const levelConfigsRes = await pool.query(
+      `
+      SELECT level, percentage
+      FROM level_config
+      WHERE status = true
+      ORDER BY level ASC
+      `
+    );
+
+    let currentReceiverId = directParentId;
+
+    for (const lvl of levelConfigsRes.rows) {
+      if (!currentReceiverId) break;
+
+      const levelPercent = parseNumber(lvl.percentage, 0);
+      if (levelPercent > 0) {
+        const levelAmount = (numericAmount * levelPercent) / 100;
+
+        await insertEarning({
+          receiverUserId: currentReceiverId,
+          fromUserId: userId,
+          sourceUserPlanId: insertedPlan.id,
+          amount: levelAmount,
+          percentage: levelPercent,
+          level: Number(lvl.level),
+          incomeType: "level",
+        });
+      }
+
+      const parentRes = await pool.query(
+        "SELECT referred_by FROM users WHERE id = $1",
+        [currentReceiverId]
+      );
+
+      currentReceiverId = parentRes.rows[0]?.referred_by || null;
+    }
+
+    await pool.query("COMMIT");
+
+    res.json({
+      ...insertedPlan,
+      max_return: maxReturn,
+      roi_percent: roiPercent,
+      ceiling_limit: plan.ceiling_limit,
+    });
+  } catch (err) {
+    await pool.query("ROLLBACK");
+    console.error("buyPlan error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+/* USER LOGGED-IN PLANS */
+export const getUserPlans = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const result = await pool.query(
+      `
+      WITH income AS (
+        SELECT
+          COALESCE(credited_user_plan_id, user_plan_id) AS credited_plan_id,
+          SUM(CASE WHEN income_type = 'direct' THEN amount ELSE 0 END) AS direct_income,
+          SUM(CASE WHEN income_type = 'level' THEN amount ELSE 0 END) AS level_income
+        FROM level_income
+        GROUP BY COALESCE(credited_user_plan_id, user_plan_id)
+      ),
+      roi AS (
+        SELECT
+          user_plan_id,
+          SUM(amount) AS total_roi
+        FROM roi_transactions
+        GROUP BY user_plan_id
+      )
+      SELECT
+        up.id,
+        p.name AS plan_name,
+        p.ceiling_limit,
+        up.amount,
+        up.daily_roi,
+        up.status,
+        up.created_at,
+        COALESCE(r.total_roi, 0) AS roi_income,
+        COALESCE(i.direct_income, 0) AS direct_income,
+        COALESCE(i.level_income, 0) AS level_income
+      FROM user_plans up
+      JOIN plans p ON p.id = up.plan_id
+      LEFT JOIN roi r ON r.user_plan_id = up.id
+      LEFT JOIN income i ON i.credited_plan_id = up.id
+      WHERE up.user_id = $1
+      ORDER BY up.id DESC
+      `,
+      [userId]
+    );
+
+    const data = result.rows.map((plan) => {
+      const deposit = Number(plan.amount || 0);
+      const roiIncome = Number(plan.roi_income || 0);
+      const directIncome = Number(plan.direct_income || 0);
+      const levelIncome = Number(plan.level_income || 0);
+
+      const totalEarned = roiIncome + directIncome + levelIncome;
+
+      const ceilingMultiplier = getCeilingMultiplier(plan);
+      const maxReturn = deposit * ceilingMultiplier;
+
+      const cappedEarned = Math.min(totalEarned, maxReturn);
+      const extraEarned = totalEarned > maxReturn ? totalEarned - maxReturn : 0;
+
+      const progress =
+        maxReturn > 0 ? ((cappedEarned / maxReturn) * 100).toFixed(2) : "0.00";
+
+      return {
+        ...plan,
+        total_earned: totalEarned,
+        max_return: maxReturn,
+        progress,
+        extra_earned: extraEarned,
+        status: totalEarned >= maxReturn ? "completed" : "active",
+      };
+    });
+
+    res.json(data);
+  } catch (err) {
+    console.error("getUserPlans error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+/* ADMIN ALL PURCHASED PLANS */
+export const getAllUserPlans = async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        up.id,
+        u.name || ' ' || COALESCE(u.lastname, '') AS user,
+        p.name AS plan_name,
+        up.amount,
+        up.daily_roi,
+        up.status,
+        up.created_at
+      FROM user_plans up
+      JOIN users u ON u.id = up.user_id
+      JOIN plans p ON p.id = up.plan_id
+      ORDER BY up.id DESC
+    `);
+
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+export const getROIHistory = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const result = await pool.query(`
+      SELECT 
+        r.id,
+        u.name AS to_user,
+        u.user_code AS to_id,
+        'Admin' AS from_user,
+        'SYSTEM' AS from_id,
+        r.total_earned AS amount,
+        r.created_at   -- ✅ FIXED HERE
+      FROM roi_transactions r
+      JOIN users u ON u.id = r.user_id
+      WHERE r.user_id = $1
+      ORDER BY r.id DESC
+    `, [userId]);
+
+    res.json(result.rows);
+
+  } catch (err) {
+    console.error("ROI history error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+export const getAllROI = async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        r.id,
+        u.name || ' ' || COALESCE(u.lastname, '') AS to_user,
+        u.user_code AS to_id,
+        'Admin' AS from_user,
+        'SYSTEM' AS from_id,
+        r.total_earned AS amount,
+        r.created_at
+      FROM roi_transactions r
+      JOIN users u ON u.id = r.user_id
+      ORDER BY r.id DESC
+    `);
+
+    res.json(result.rows);
+
+  } catch (err) {
+    console.error("getAllROI error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Deposit
+export const getUserDeposits = async (req, res) => {
+  try {
+    const userId = req.user.id; // ✅ logged-in user
+
+    const result = await pool.query(`
+      SELECT 
+        up.id,
+        u.name AS from_user,
+        u.user_code AS from_id,
+        p.name AS plan_name,
+        up.amount,
+        up.created_at
+      FROM user_plans up
+      JOIN users u ON u.id = up.user_id
+      JOIN plans p ON p.id = up.plan_id
+      WHERE up.user_id = $1   -- ✅ IMPORTANT FILTER
+      ORDER BY up.id DESC
+    `, [userId]);
+
+    res.json(result.rows);
+
+  } catch (err) {
+    console.error("getUserDeposits error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+export const getAllTransactions = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // ✅ ROI TRANSACTIONS
+    const roi = await pool.query(`
+      SELECT 
+        r.id,
+        'Admin' AS from_user,
+        'SYSTEM' AS from_id,
+        u.name AS to_user,
+        u.user_code AS to_id,
+        'Daily ROI Income' AS type,
+        r.total_earned AS amount,
+        r.created_at
+      FROM roi_transactions r
+      JOIN users u ON u.id = r.user_id
+      WHERE r.user_id = $1
+    `, [userId]);
+
+    // ✅ DEPOSITS
+    const deposits = await pool.query(`
+      SELECT 
+        up.id,
+        u.name AS from_user,
+        u.user_code AS from_id,
+        'Admin' AS to_user,
+        'SYSTEM' AS to_id,
+        'Deposit' AS type,
+        up.amount,
+        up.created_at
+      FROM user_plans up
+      JOIN users u ON u.id = up.user_id
+      WHERE up.user_id = $1
+    `, [userId]);
+
+    // ✅ WITHDRAWALS
+    const withdraws = await pool.query(`
+      SELECT 
+        w.id,
+        u.name AS from_user,
+        u.user_code AS from_id,
+        'Admin' AS to_user,
+        'SYSTEM' AS to_id,
+        'Withdraw' AS type,
+        w.amount,
+        w.created_at
+      FROM withdrawals w
+      JOIN users u ON u.id = w.user_id
+      WHERE w.user_id = $1
+    `, [userId]);
+
+    // ✅ MERGE ALL
+    const all = [
+      ...roi.rows,
+      ...deposits.rows,
+      ...withdraws.rows
+    ];
+
+    // ✅ SORT BY DATE DESC
+    all.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+    res.json(all);
+
+  } catch (err) {
+    console.error("getAllTransactions error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+export const getAllTransactionsAdmin = async (req, res) => {
+  try {
+
+    // ✅ ROI
+    const roi = await pool.query(`
+      SELECT 
+        r.id,
+        'Admin' AS from_user,
+        'SYSTEM' AS from_id,
+        u.name AS to_user,
+        u.user_code AS to_id,
+        'ROI Income' AS type,
+        r.total_earned AS amount,
+        r.created_at
+      FROM roi_transactions r
+      JOIN users u ON u.id = r.user_id
+    `);
+
+    // ✅ DEPOSIT
+    const deposit = await pool.query(`
+      SELECT 
+        up.id,
+        u.name AS from_user,
+        u.user_code AS from_id,
+        'Admin' AS to_user,
+        'SYSTEM' AS to_id,
+        'Deposit' AS type,
+        up.amount,
+        up.created_at
+      FROM user_plans up
+      JOIN users u ON u.id = up.user_id
+    `);
+
+    // ✅ WITHDRAW
+    const withdraw = await pool.query(`
+      SELECT 
+        w.id,
+        u.name AS from_user,
+        u.user_code AS from_id,
+        'Admin' AS to_user,
+        'SYSTEM' AS to_id,
+        'Withdraw' AS type,
+        w.amount,
+        w.created_at
+      FROM withdrawals w
+      JOIN users u ON u.id = w.user_id
+    `);
+
+    // ✅ MERGE
+    const all = [
+      ...roi.rows,
+      ...deposit.rows,
+      ...withdraw.rows
+    ];
+
+    // ✅ SORT
+    all.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+    res.json(all);
+
+  } catch (err) {
+    console.error("Admin TX error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// DELETE USER PLAN
+export const deleteUserPlan = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await pool.query("BEGIN");
+
+    await pool.query(
+      "DELETE FROM roi_transactions WHERE user_plan_id = $1",
+      [id]
+    );
+
+    await pool.query(
+      "DELETE FROM user_plans WHERE id = $1",
+      [id]
+    );
+
+    await pool.query("COMMIT");
+
+    res.json({ message: "Plan deleted successfully" });
+  } catch (err) {
+    await pool.query("ROLLBACK");
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// UPDATE STATUS (ACTIVE / INACTIVE)
+export const updateUserPlanStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    await pool.query(
+      "UPDATE user_plans SET status = $1 WHERE id = $2",
+      [status.toLowerCase(), id]
+    );
+
+    res.json({ message: "Status updated" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
