@@ -10944,7 +10944,7 @@ td {
   padding: 20px;
 
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(320px, 420px));
   gap: 25px;
 }
 

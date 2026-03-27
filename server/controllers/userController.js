@@ -59,14 +59,29 @@ export const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
 
+    await pool.query("BEGIN");
+
+    // 🔥 DELETE ALL DEPENDENCIES FIRST
+    await pool.query("DELETE FROM roi_transactions WHERE user_id=$1", [id]);
+    await pool.query("DELETE FROM level_income WHERE user_id=$1 OR from_user_id=$1", [id]);
+    await pool.query("DELETE FROM user_plans WHERE user_id=$1", [id]);
+    await pool.query("DELETE FROM withdrawals WHERE user_id=$1", [id]);
+    await pool.query("DELETE FROM bank_details WHERE user_id=$1", [id]);
+    await pool.query("DELETE FROM support_tickets WHERE user_id=$1", [id]);
+
+    // ✅ FINALLY DELETE USER
     await pool.query("DELETE FROM users WHERE id=$1", [id]);
 
-    res.json({ message: "User deleted" });
+    await pool.query("COMMIT");
+
+    res.json({ message: "User deleted successfully" });
+
   } catch (err) {
+    await pool.query("ROLLBACK");
     console.error("deleteUser error:", err);
     res.status(500).json({ error: err.message });
   }
-};
+};  
 
 /* GET MY PROFILE */
 export const getMyProfile = async (req, res) => {

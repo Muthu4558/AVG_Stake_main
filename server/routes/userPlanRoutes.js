@@ -10,7 +10,8 @@ import {
   getAllTransactions,
   getAllTransactionsAdmin,
   deleteUserPlan,
-  updateUserPlanStatus
+  updateUserPlanStatus,
+  getMyTotalROI
 } from "../controllers/userPlanController.js";
 
 const router = express.Router();
@@ -21,6 +22,8 @@ router.get("/all", verifyToken, getAllUserPlans);
 
 router.get("/roi-history", verifyToken, getROIHistory);
 router.get("/roi-all", verifyToken, getAllROI);
+
+router.get("/my-total-roi", verifyToken, getMyTotalROI);
 
 router.get("/deposits", verifyToken, getUserDeposits);
 

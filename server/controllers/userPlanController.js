@@ -355,6 +355,76 @@ export const getAllROI = async (req, res) => {
   }
 };
 
+export const getMyTotalROI = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const result = await pool.query(`
+      SELECT COALESCE(SUM(amount),0) AS total_roi
+      FROM roi_transactions
+      WHERE user_id = $1
+    `, [userId]);
+
+    res.json({
+      roi: Number(result.rows[0].total_roi)
+    });
+
+  } catch (err) {
+    console.error("getMyTotalROI error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+export const getMyWallet = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const result = await pool.query(`
+      SELECT 
+        COALESCE(roi.total,0) AS roi,
+        COALESCE(direct.total,0) AS direct,
+        COALESCE(level.total,0) AS level
+
+      FROM users u
+
+      LEFT JOIN (
+        SELECT user_id, SUM(amount) AS total
+        FROM roi_transactions
+        GROUP BY user_id
+      ) roi ON roi.user_id = u.id
+
+      LEFT JOIN (
+        SELECT user_id, SUM(amount) AS total
+        FROM level_income
+        WHERE income_type IN ('direct','plan_direct')
+        GROUP BY user_id
+      ) direct ON direct.user_id = u.id
+
+      LEFT JOIN (
+        SELECT user_id, SUM(amount) AS total
+        FROM level_income
+        WHERE income_type = 'level'
+        GROUP BY user_id
+      ) level ON level.user_id = u.id
+
+      WHERE u.id = $1
+    `, [userId]);
+
+    const row = result.rows[0];
+
+    res.json({
+      roi: Number(row.roi),
+      direct: Number(row.direct),
+      level: Number(row.level),
+      total: Number(row.roi) + Number(row.direct) + Number(row.level)
+    });
+
+  } catch (err) {
+    console.error("getMyWallet error:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
 // Deposit
 export const getUserDeposits = async (req, res) => {
   try {

@@ -11,33 +11,35 @@ const Topbar = ({ isOpen, setIsOpen }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [profileRes, walletRes] = await Promise.all([
-          API.get("/users/me"),
-          API.get("/withdrawals/summary"),
-        ]);
+  const fetchData = async () => {
+    try {
+      const [profileRes, roiRes, summaryRes] = await Promise.all([
+        API.get("/users/me"),
+        API.get("/user-plans/my-total-roi"),   // ✅ ROI (same as dashboard)
+        API.get("/withdrawals/summary"),       // ✅ Direct + Level
+      ]);
 
-        setUser(profileRes.data);
+      setUser(profileRes.data);
 
-        // ✅ CALCULATE TOTAL WALLET
-        const roi = Number(walletRes.data.roi || 0);
-        const direct = Number(walletRes.data.directReferral || 0);
-        const level = Number(walletRes.data.level || 0);
+      // ✅ GET VALUES
+      const roi = Number(roiRes.data.roi || 0);
+      const direct = Number(summaryRes.data.directReferral || 0);
+      const level = Number(summaryRes.data.level || 0);
 
-        const totalWallet = roi + direct + level;
+      // ✅ TOTAL WALLET
+      const totalWallet = roi + direct + level;
 
-        setWallet(totalWallet);
+      setWallet(totalWallet);
 
-      } catch (err) {
-        console.error("Topbar fetch error:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+    } catch (err) {
+      console.error("Topbar fetch error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchData();
-  }, []);
+  fetchData();
+}, []);
 
   const handleLogout = () => {
     // 🔥 Clear auth data

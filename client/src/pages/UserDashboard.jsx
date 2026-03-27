@@ -58,12 +58,16 @@ const UserDashboard = () => {
         const token = localStorage.getItem("token");
 
         const [
+          roiRes,
           summaryRes,
           withdrawRes,
           referralsRes,
           networkRes,
           depositRes
         ] = await Promise.all([
+          axios.get("http://localhost:5000/api/user-plans/my-total-roi", {
+    headers: { Authorization: `Bearer ${token}` },
+  }),
           axios.get("http://localhost:5000/api/withdrawals/summary", {
             headers: { Authorization: `Bearer ${token}` },
           }),
@@ -83,10 +87,10 @@ const UserDashboard = () => {
 
         // ✅ WALLET
         setWallet({
-          roi: summaryRes.data.roi || 0,
-          level: summaryRes.data.level || 0,
-          direct: summaryRes.data.directReferral || 0,
-        });
+  roi: roiRes.data.roi || 0, // 🔥 CORRECT ROI FROM PORTFOLIO
+  level: summaryRes.data.level || 0,
+  direct: summaryRes.data.directReferral || 0,
+});
 
         // ✅ WITHDRAW STATS
         const withdrawals = withdrawRes.data || [];
@@ -226,7 +230,8 @@ const UserDashboard = () => {
           <div className="grid grid-4">
             <StatCard title="Direct Referrals" value={stats.directCount} icon={<FaUsers />} />
             <StatCard title="Team Count" value={stats.teamCount} icon={<FaUsers />} />
-            <StatCard title="Team Business" value={`$${stats.teamBusiness}`} icon={<FaBolt />} />
+            {/* <StatCard title="Team Business" value={`$${stats.teamBusiness}`} icon={<FaBolt />} /> */}
+            <StatCard title="Team Business" value={0} icon={<FaBolt />} />
             <StatCard title="Today Business" value={`$${stats.todayBusiness}`} icon={<FaBolt />} />
           </div>
 

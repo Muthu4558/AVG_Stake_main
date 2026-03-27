@@ -1,7 +1,7 @@
 import cron from "node-cron";
 import { pool } from "../config/db.js";
 
-cron.schedule("0 0 * * *", async () => {
+cron.schedule("* * * * *", async () => {
   console.log("Running ROI cron...");
 
   try {
