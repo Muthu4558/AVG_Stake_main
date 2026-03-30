@@ -5,15 +5,22 @@ import {
   createRank,
   updateRank,
   deleteRank,
-  toggleRankStatus
+  toggleRankStatus,
+  getRanksUser,
+  getAllUsersRewards,
+  updateRewardStatus
 } from "../controllers/rankController.js";
 
 const router = express.Router();
 
 router.get("/", verifyToken, isAdmin, getRanks);
+router.get("/user", verifyToken, getRanksUser);
 router.post("/", verifyToken, isAdmin, createRank);
 router.put("/:id", verifyToken, isAdmin, updateRank);
 router.delete("/:id", verifyToken, isAdmin, deleteRank);
 router.put("/:id/toggle", verifyToken, isAdmin, toggleRankStatus);
+
+router.get("/admin", verifyToken, isAdmin, getAllUsersRewards);
+router.post("/status", verifyToken, isAdmin, updateRewardStatus);
 
 export default router;

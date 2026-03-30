@@ -49,6 +49,7 @@ import MyReffral from "./pages/MyReffral";
 import UserProfile from "./pages/UserProfile";
 import UserSupportTicket from "./pages/UserSupportTicket";
 import UserBank from "./pages/UserBank";
+import UserReward from "./pages/UserReward";
 
 function App() {
   return (
@@ -115,7 +116,7 @@ function App() {
           <Route path="/user-profile" element={<UserProfile />} />
           <Route path="/user-support" element={<UserSupportTicket />} />
           <Route path="/user-bank" element={<UserBank />} />
-
+          <Route path="/user-rewards" element={<UserReward />} />
         </Route>
 
       </Routes>

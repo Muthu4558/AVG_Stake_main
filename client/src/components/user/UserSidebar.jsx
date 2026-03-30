@@ -10,6 +10,7 @@ import {
   FaUser,
   FaNetworkWired,
   FaMoneyBillWave,
+  FaTrophy 
 } from "react-icons/fa";
 
 import Logo from "../../assets/logo.png"
@@ -153,6 +154,9 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
           <SubItem label="My Referrals" to="/referrals" />
           <SubItem label="My Network" to="/network" />
         </div>
+
+        <p className="us-section">REWARD</p>
+        <MenuItem icon={<FaTrophy />} label="Rewards" to="/user-rewards" />
 
         {/* ACCOUNT */}
         <p className="us-section">ACCOUNT</p>

@@ -152,7 +152,7 @@ const UserBank = () => {
                 </div>
 
                 <div className="ubItem">
-                  <p>GPay Number</p>
+                  <p>GPay, PhonePe, Paytm Number</p>
                   <h4>{bankData.gpay_number || "-"}</h4>
                 </div>
 
@@ -202,7 +202,7 @@ const UserBank = () => {
                 <Input name="upiId" label="UPI ID" value={formData.upiId} onChange={handleChange} />
                 <Input
                   name="gpayNumber"
-                  label="GPay Number"
+                  label="GPay, PhonePe, Paytm Number"
                   value={formData.gpayNumber}
                   onChange={handleChange}
                 />
