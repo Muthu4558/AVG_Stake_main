@@ -49,12 +49,97 @@ const insertEarning = async ({
   const creditedUserPlanId = await getCreditedPlanId(receiverUserId);
   if (!creditedUserPlanId) return;
 
+  // ✅ GET PLAN DETAILS
+  const planRes = await pool.query(
+    `
+    SELECT up.amount, p.ceiling_limit
+    FROM user_plans up
+    JOIN plans p ON p.id = up.plan_id
+    WHERE up.id = $1
+    `,
+    [creditedUserPlanId]
+  );
+
+  const plan = planRes.rows[0];
+  if (!plan) return;
+
+  const multiplier =
+    parseFloat(String(plan.ceiling_limit).replace(/[^\d.]/g, "")) || 2;
+
+  const maxReturn = Number(plan.amount) * multiplier;
+
+  // ✅ GET TOTAL EARNED (ROI + DIRECT + LEVEL)
+  const totalRes = await pool.query(
+    `
+    SELECT 
+      COALESCE(r.total,0) AS roi,
+      COALESCE(d.total,0) AS direct,
+      COALESCE(l.total,0) AS level
+    FROM user_plans up
+
+    LEFT JOIN (
+      SELECT user_plan_id, SUM(amount) AS total
+      FROM roi_transactions
+      GROUP BY user_plan_id
+    ) r ON r.user_plan_id = up.id
+
+    LEFT JOIN (
+      SELECT credited_user_plan_id, SUM(amount) AS total
+      FROM level_income
+      WHERE income_type IN ('direct','plan_direct')
+      GROUP BY credited_user_plan_id
+    ) d ON d.credited_user_plan_id = up.id
+
+    LEFT JOIN (
+      SELECT credited_user_plan_id, SUM(amount) AS total
+      FROM level_income
+      WHERE income_type = 'level'
+      GROUP BY credited_user_plan_id
+    ) l ON l.credited_user_plan_id = up.id
+
+    WHERE up.id = $1
+    `,
+    [creditedUserPlanId]
+  );
+
+  const row = totalRes.rows[0];
+
+  const totalEarned =
+    Number(row.roi) +
+    Number(row.direct) +
+    Number(row.level);
+
+  // 🚫 STOP FULLY IF TARGET REACHED
+  if (totalEarned >= maxReturn) {
+    await pool.query(
+      `UPDATE user_plans SET status='completed' WHERE id=$1`,
+      [creditedUserPlanId]
+    );
+    return;
+  }
+
+  let finalAmount = Number(amount);
+
+  // 🔥 PREVENT OVERFLOW (PARTIAL CREDIT)
+  if (totalEarned + finalAmount > maxReturn) {
+    finalAmount = maxReturn - totalEarned;
+
+    // nothing left → stop
+    if (finalAmount <= 0) {
+      await pool.query(
+        `UPDATE user_plans SET status='completed' WHERE id=$1`,
+        [creditedUserPlanId]
+      );
+      return;
+    }
+  }
+
+  // ✅ INSERT SAFE AMOUNT
   await pool.query(
     `
     INSERT INTO level_income
-      (user_id, from_user_id, user_plan_id, credited_user_plan_id, level, amount, percentage, income_type)
-    VALUES
-      ($1, $2, $3, $4, $5, $6, $7, $8)
+    (user_id, from_user_id, user_plan_id, credited_user_plan_id, level, amount, percentage, income_type)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
     `,
     [
       receiverUserId,
@@ -62,11 +147,19 @@ const insertEarning = async ({
       sourceUserPlanId,
       creditedUserPlanId,
       level,
-      amount,
+      finalAmount,
       percentage,
       incomeType,
     ]
   );
+
+  // 🔥 FINAL CHECK → MARK COMPLETED
+  if (totalEarned + finalAmount >= maxReturn) {
+    await pool.query(
+      `UPDATE user_plans SET status='completed' WHERE id=$1`,
+      [creditedUserPlanId]
+    );
+  }
 };
 
 /* BUY PLAN */

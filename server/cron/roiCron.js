@@ -15,16 +15,42 @@ cron.schedule("* * * * *", async () => {
       const maxReturn = Number(plan.amount) * 2;
 
       // ✅ Get current earned (IMPORTANT: use SUM(amount), not total_earned)
-      const totalRes = await pool.query(
-        `
-        SELECT COALESCE(SUM(amount), 0) AS total
-        FROM roi_transactions
-        WHERE user_plan_id = $1
-        `,
-        [plan.id]
-      );
+      const totalRes = await pool.query(`
+  SELECT 
+    COALESCE(r.total,0) AS roi,
+    COALESCE(d.total,0) AS direct,
+    COALESCE(l.total,0) AS level
+  FROM user_plans up
 
-      const currentTotal = Number(totalRes.rows[0].total);
+  LEFT JOIN (
+    SELECT user_plan_id, SUM(amount) AS total
+    FROM roi_transactions
+    GROUP BY user_plan_id
+  ) r ON r.user_plan_id = up.id
+
+  LEFT JOIN (
+    SELECT credited_user_plan_id, SUM(amount) AS total
+    FROM level_income
+    WHERE income_type IN ('direct','plan_direct')
+    GROUP BY credited_user_plan_id
+  ) d ON d.credited_user_plan_id = up.id
+
+  LEFT JOIN (
+    SELECT credited_user_plan_id, SUM(amount) AS total
+    FROM level_income
+    WHERE income_type = 'level'
+    GROUP BY credited_user_plan_id
+  ) l ON l.credited_user_plan_id = up.id
+
+  WHERE up.id = $1
+`, [plan.id]);
+
+const row = totalRes.rows[0];
+
+const currentTotal =
+  Number(row.roi) +
+  Number(row.direct) +
+  Number(row.level);
 
       // ✅ HARD STOP (no more ROI)
       if (currentTotal >= maxReturn) {
