@@ -270,7 +270,7 @@ const RankRewards = () => {
               <th>PHONE NO</th>
               <th>REWARD</th>
               <th>STATUS</th>
-              <th>CREATED AT</th>
+              {/* <th>CREATED AT</th> */}
               <th>ACTIONS</th>
             </tr>
           </thead>
@@ -292,7 +292,7 @@ const RankRewards = () => {
                       {reward.status.charAt(0).toUpperCase() + reward.status.slice(1)}
                     </span>
                   </td>
-                  <td>{reward.createdAt}</td>
+                  {/* <td>{reward.createdAt}</td> */}
 
                   <td>
                     <div className="rr-actions-dropdown">
