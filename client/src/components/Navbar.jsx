@@ -7,9 +7,11 @@ import { toast } from "react-hot-toast";
 const NAVBAR = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [createdUserCode, setCreatedUserCode] = useState("");
+  const [showUserCodeModal, setShowUserCodeModal] = useState(false);
 
   const [loginData, setLoginData] = useState({
-    email: '',
+    user_code: '',
     password: '',
   });
 
@@ -98,7 +100,7 @@ const NAVBAR = () => {
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
 
-    if (!loginData.email || !loginData.password) {
+    if (!loginData.user_code || !loginData.password) {
       return toast.error("All fields are required ⚠️");
     }
 
@@ -106,7 +108,7 @@ const NAVBAR = () => {
       setLoading(true);
 
       const res = await axios.post('http://localhost:5000/api/auth/login', {
-        email: loginData.email,
+        user_code: loginData.user_code, // reuse field or rename UI later
         password: loginData.password,
       });
 
@@ -154,7 +156,7 @@ const NAVBAR = () => {
     try {
       setLoading(true);
 
-      await axios.post('http://localhost:5000/api/auth/signup', {
+      const res = await axios.post('http://localhost:5000/api/auth/signup', {
         name,
         lastname,
         email,
@@ -163,10 +165,12 @@ const NAVBAR = () => {
         referralCode: referralCode.trim() || undefined,
       });
 
+      // ✅ SAVE USER CODE
+      setCreatedUserCode(res.data.user_code);
+      setShowUserCodeModal(true);
+
       toast.success("Signup successful 🎉 Please log in");
 
-      setShowSignup(false);
-      setShowLogin(true);
       setSignupData({
         name: '',
         lastname: '',
@@ -286,13 +290,13 @@ const NAVBAR = () => {
 
             <form className="login-form" onSubmit={handleLoginSubmit}>
               <div className="form-group">
-                <label>Email</label>
+                <label>User Code</label>
                 <input
-                  type="email"
-                  name="email"
-                  placeholder="Enter your email"
+                  type="text"
+                  name="user_code"
+                  placeholder="Enter your user code"
                   className="form-input"
-                  value={loginData.email}
+                  value={loginData.user_code}
                   onChange={handleLoginChange}
                 />
               </div>
@@ -359,115 +363,178 @@ const NAVBAR = () => {
 
       {/* ================= SIGNUP MODAL ================= */}
       {showSignup && (
-  <div className="modal-overlay" onClick={() => setShowSignup(false)}>
-    <div className="signup-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay" onClick={() => setShowSignup(false)}>
+          <div className="signup-modal" onClick={(e) => e.stopPropagation()}>
 
-      <h2 className="signup-title">Create Account</h2>
+            <h2 className="signup-title">Create Account</h2>
 
-      <form className="signup-form" onSubmit={handleSignupSubmit}>
+            <form className="signup-form" onSubmit={handleSignupSubmit}>
 
-        {/* ROW 1 */}
-        <div className="form-row">
-          <div className="form-group">
-            <label>First Name</label>
-            <input
-              type="text"
-              name="name"
-              placeholder="Enter First Name"
-              value={signupData.name}
-              onChange={handleSignupChange}
-            />
-          </div>
+              {/* ROW 1 */}
+              <div className="form-row">
+                <div className="form-group">
+                  <label>First Name</label>
+                  <input
+                    type="text"
+                    name="name"
+                    placeholder="Enter First Name"
+                    value={signupData.name}
+                    onChange={handleSignupChange}
+                  />
+                </div>
 
-          <div className="form-group">
-            <label>Last Name</label>
-            <input
-              type="text"
-              name="lastname"
-              placeholder="Enter Last Name"
-              value={signupData.lastname}
-              onChange={handleSignupChange}
-            />
+                <div className="form-group">
+                  <label>Last Name</label>
+                  <input
+                    type="text"
+                    name="lastname"
+                    placeholder="Enter Last Name"
+                    value={signupData.lastname}
+                    onChange={handleSignupChange}
+                  />
+                </div>
+              </div>
+
+              {/* ROW 2 */}
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Email</label>
+                  <input
+                    type="email"
+                    name="email"
+                    placeholder="Enter Email"
+                    value={signupData.email}
+                    onChange={handleSignupChange}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Phone Number</label>
+                  <input
+                    type="text"
+                    name="phone"
+                    placeholder="+91 Enter Phone"
+                    value={signupData.phone}
+                    onChange={handleSignupChange}
+                  />
+                </div>
+              </div>
+
+              {/* ROW 3 */}
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Password</label>
+                  <input
+                    type="password"
+                    name="password"
+                    placeholder="Enter Password"
+                    value={signupData.password}
+                    onChange={handleSignupChange}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Confirm Password</label>
+                  <input
+                    type="password"
+                    name="confirmPassword"
+                    placeholder="Confirm Password"
+                    value={signupData.confirmPassword}
+                    onChange={handleSignupChange}
+                  />
+                </div>
+              </div>
+
+              {/* REFERRAL */}
+              <div className="form-group full">
+                <label>Referral Code</label>
+                <input
+                  type="text"
+                  name="referralCode"
+                  placeholder="Enter referral code"
+                  value={signupData.referralCode}
+                  onChange={handleSignupChange}
+                />
+              </div>
+
+              {/* BUTTON */}
+              <button type="submit" className="signup-btn" disabled={loading}>
+                {loading ? "Signing up..." : "Sign Up"}
+              </button>
+
+              {/* SWITCH */}
+              <p className="switch-text">
+                Already have an account?{" "}
+                <span onClick={openLogin}>Login</span>
+              </p>
+
+            </form>
           </div>
         </div>
+      )}
 
-        {/* ROW 2 */}
-        <div className="form-row">
-          <div className="form-group">
-            <label>Email</label>
-            <input
-              type="email"
-              name="email"
-              placeholder="Enter Email"
-              value={signupData.email}
-              onChange={handleSignupChange}
-            />
-          </div>
+      {showUserCodeModal && (
+        <div className="modal-overlay">
+          <div className="signup-modal" style={{ textAlign: "center" }}>
 
-          <div className="form-group">
-            <label>Phone Number</label>
-            <input
-              type="text"
-              name="phone"
-              placeholder="+91 Enter Phone"
-              value={signupData.phone}
-              onChange={handleSignupChange}
-            />
+            <h2 style={{ marginBottom: "10px" }}>🎉 Account Created (Take Screenshot)</h2>
+
+            <p style={{ marginBottom: "10px" }}>
+              Your <b>User Code</b> (Login ID):
+            </p>
+
+            <div style={{
+              background: "#111",
+              padding: "12px",
+              borderRadius: "8px",
+              fontSize: "18px",
+              fontWeight: "bold",
+              marginBottom: "15px"
+            }}>
+              {createdUserCode}
+            </div>
+
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(createdUserCode);
+                toast.success("Copied to clipboard ✅");
+              }}
+              style={{
+                marginBottom: "10px",
+                padding: "8px 16px",
+                background: "#00c853",
+                border: "none",
+                color: "#fff",
+                borderRadius: "6px",
+                cursor: "pointer"
+              }}
+            >
+              Copy User Code
+            </button>
+
+            <br />
+
+            <button
+              onClick={() => {
+                setShowUserCodeModal(false);
+                setShowSignup(false);
+                setShowLogin(true);
+              }}
+              style={{
+                padding: "8px 16px",
+                background: "#ff3df2",
+                border: "none",
+                color: "#fff",
+                borderRadius: "6px",
+                cursor: "pointer"
+              }}
+            >
+              Continue to Login
+            </button>
+
           </div>
         </div>
-
-        {/* ROW 3 */}
-        <div className="form-row">
-          <div className="form-group">
-            <label>Password</label>
-            <input
-              type="password"
-              name="password"
-              placeholder="Enter Password"
-              value={signupData.password}
-              onChange={handleSignupChange}
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Confirm Password</label>
-            <input
-              type="password"
-              name="confirmPassword"
-              placeholder="Confirm Password"
-              value={signupData.confirmPassword}
-              onChange={handleSignupChange}
-            />
-          </div>
-        </div>
-
-        {/* REFERRAL */}
-        <div className="form-group full">
-          <label>Referral Code</label>
-          <input
-            type="text"
-            name="referralCode"
-            placeholder="Enter referral code"
-            value={signupData.referralCode}
-            onChange={handleSignupChange}
-          />
-        </div>
-
-        {/* BUTTON */}
-        <button type="submit" className="signup-btn" disabled={loading}>
-          {loading ? "Signing up..." : "Sign Up"}
-        </button>
-
-        {/* SWITCH */}
-        <p className="switch-text">
-          Already have an account?{" "}
-          <span onClick={openLogin}>Login</span>
-        </p>
-
-      </form>
-    </div>
-  </div>
-)}
+      )}
     </>
   );
 };

@@ -1,11 +1,21 @@
-import React from "react";
 import { Navigate, Outlet } from "react-router-dom";
 
 const UserRoute = () => {
-  // 🔥 Replace this with your real auth logic
-  const user = localStorage.getItem("user"); 
+  const token = localStorage.getItem("token");
+  const role = localStorage.getItem("role");
 
-  return user ? <Outlet /> : <Navigate to="/" />;
+  // ❌ Not logged in
+  if (!token) {
+    return <Navigate to="/" replace />;
+  }
+
+  // ❌ Not user
+  if (role !== "user") {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // ✅ Allowed
+  return <Outlet />;
 };
 
 export default UserRoute;

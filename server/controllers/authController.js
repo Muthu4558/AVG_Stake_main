@@ -28,13 +28,6 @@ export const signup = async (req, res) => {
       });
     }
 
-    const existingUser = await findUserByEmail(email);
-    if (existingUser) {
-      return res.status(400).json({
-        message: "Email already registered",
-      });
-    }
-
     let referred_by = null;
 
 if (referralCode) {
@@ -113,9 +106,14 @@ export const adminSignup = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { user_code, password } = req.body;
 
-    const user = await findUserByEmail(email);
+const result = await pool.query(
+  "SELECT * FROM users WHERE user_code = $1",
+  [user_code]
+);
+
+const user = result.rows[0];
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
