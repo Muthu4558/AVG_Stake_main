@@ -169,7 +169,7 @@ const UserDirect = () => {
                 disabled={page === 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
               >
-                {"< Prev"}
+                {"< "}
               </button>
 
               {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
@@ -186,7 +186,7 @@ const UserDirect = () => {
                 disabled={page === totalPages}
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
               >
-                {"Next >"}
+                {" >"}
               </button>
             </div>
           </div>

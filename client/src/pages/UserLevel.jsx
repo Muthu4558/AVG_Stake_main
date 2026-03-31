@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import Sidebar from "../components/user/UserSidebar";
 import Topbar from "../components/user/UserTopbar";
@@ -8,6 +8,10 @@ const UserDirect = () => {
   const [search, setSearch] = useState("");
   const [data, setData] = useState([]);
 
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  // ✅ FETCH DATA
   useEffect(() => {
     const fetchLevelIncome = async () => {
       try {
@@ -31,9 +35,58 @@ const UserDirect = () => {
     fetchLevelIncome();
   }, []);
 
-  const filteredData = data.filter((item) =>
-    item.to.toLowerCase().includes(search.toLowerCase())
-  );
+  // ✅ FILTER
+  const filteredData = useMemo(() => {
+    const q = search.toLowerCase();
+
+    return data.filter((item) =>
+      (item.from || "").toLowerCase().includes(q) ||
+      (item.to || "").toLowerCase().includes(q) ||
+      (item.type || "").toLowerCase().includes(q) ||
+      (item.amount?.toString() || "").toLowerCase().includes(q)
+    );
+  }, [search, data]);
+
+  // ✅ PAGINATION
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / rowsPerPage));
+
+  const paginatedData = useMemo(() => {
+    const start = (page - 1) * rowsPerPage;
+    return filteredData.slice(start, start + rowsPerPage);
+  }, [filteredData, page, rowsPerPage]);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(1);
+  }, [totalPages, page]);
+
+  // ✅ SMART PAGINATION
+  const getPagination = () => {
+    const pages = [];
+    const maxVisible = 5;
+
+    let start = Math.max(page - 2, 1);
+    let end = Math.min(start + maxVisible - 1, totalPages);
+
+    if (end - start < maxVisible - 1) {
+      start = Math.max(end - maxVisible + 1, 1);
+    }
+
+    if (start > 1) {
+      pages.push(1);
+      if (start > 2) pages.push("...");
+    }
+
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+
+    if (end < totalPages) {
+      if (end < totalPages - 1) pages.push("...");
+      pages.push(totalPages);
+    }
+
+    return pages;
+  };
 
   return (
     <div className="udiLayout">
@@ -43,19 +96,24 @@ const UserDirect = () => {
         <Topbar isOpen={isOpen} setIsOpen={setIsOpen} />
 
         <div className="udiContent">
+
+          {/* HEADER */}
           <div className="utxFirstContent">
             <h2 className="udiTitle">My Level Income</h2>
 
-          <div className="udiSearch">
-            <input
-              type="text"
-              placeholder="Search..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
+            <div className="udiSearch">
+              <input
+                placeholder="Search..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+              />
+            </div>
           </div>
 
+          {/* TABLE */}
           <div className="udiTableWrapper">
             <table className="udiTable">
               <thead>
@@ -70,16 +128,14 @@ const UserDirect = () => {
               </thead>
 
               <tbody>
-                {filteredData.length === 0 ? (
+                {paginatedData.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="udiEmpty">
-                      No available options
-                    </td>
+                    <td colSpan="6">No available options</td>
                   </tr>
                 ) : (
-                  filteredData.map((item, index) => (
+                  paginatedData.map((item, index) => (
                     <tr key={item.id}>
-                      <td>{index + 1}</td>
+                      <td>{(page - 1) * rowsPerPage + index + 1}</td>
 
                       <td>
                         <p>{item.from}</p>
@@ -91,12 +147,14 @@ const UserDirect = () => {
                         <span>{item.toId}</span>
                       </td>
 
-                      <td className="udiType">{item.type}</td>
+                      <td>{item.type}</td>
 
                       <td className="udiAmount">{item.amount}</td>
 
                       <td>
-                        {new Date(item.date).toLocaleString()}
+                        {item.date
+                          ? new Date(item.date).toLocaleString()
+                          : "-"}
                       </td>
                     </tr>
                   ))
@@ -105,21 +163,60 @@ const UserDirect = () => {
             </table>
           </div>
 
+          {/* FOOTER */}
           <div className="usrDeposit__footer">
+
             <div className="usrDeposit__rows">
               Rows:
-              <select>
-                <option>10</option>
-                <option>25</option>
+              <select
+                value={rowsPerPage}
+                onChange={(e) => {
+                  setRowsPerPage(Number(e.target.value));
+                  setPage(1);
+                }}
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
               </select>
             </div>
 
+            {/* ✅ CLEAN PAGINATION */}
             <div className="usrDeposit__pagination">
-              <button>{"< Prev"}</button>
-              <button className="active">1</button>
-              <button>{"Next >"}</button>
+
+              <button
+                disabled={page === 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                {"<"}
+              </button>
+
+              {getPagination().map((p, i) =>
+                p === "..." ? (
+                  <span key={i} className="dots">...</span>
+                ) : (
+                  <button
+                    key={i}
+                    className={page === p ? "active" : ""}
+                    onClick={() => setPage(p)}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
+
+              <button
+                disabled={page === totalPages}
+                onClick={() =>
+                  setPage((p) => Math.min(totalPages, p + 1))
+                }
+              >
+                {">"}
+              </button>
+
             </div>
+
           </div>
+
         </div>
       </div>
     </div>

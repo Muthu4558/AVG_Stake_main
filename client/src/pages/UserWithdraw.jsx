@@ -24,9 +24,14 @@ const UserWithdraw = () => {
   });
 
   const [errors, setErrors] = useState({});
+
+  // ✅ PAGINATION
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
   const token = localStorage.getItem("token");
 
-  // ✅ FETCH DATA
+  // ✅ FETCH
   const fetchData = async () => {
     try {
       const [summaryRes, withdrawRes] = await Promise.all([
@@ -47,19 +52,69 @@ const UserWithdraw = () => {
         request: `$${Number(w.amount).toFixed(2)}`,
         approved: `$${Number(w.approved_amount).toFixed(2)}`,
         status: w.status,
-        date: new Date(w.created_at).toLocaleString(),
+        date: w.created_at,
       }));
 
       setData(formatted);
-
     } catch (err) {
-      console.error("Fetch error:", err);
+      console.error(err);
     }
   };
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  // ✅ FILTER
+  const filteredData = useMemo(() => {
+    return data.filter((item) =>
+      Object.values(item)
+        .join("")
+        .toLowerCase()
+        .includes(search.toLowerCase())
+    );
+  }, [search, data]);
+
+  // ✅ PAGINATION
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / rowsPerPage));
+
+  const paginatedData = useMemo(() => {
+    const start = (page - 1) * rowsPerPage;
+    return filteredData.slice(start, start + rowsPerPage);
+  }, [filteredData, page, rowsPerPage]);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(1);
+  }, [totalPages, page]);
+
+  // ✅ SMART PAGINATION
+  const getPagination = () => {
+    const pages = [];
+    const maxVisible = 5;
+
+    let start = Math.max(page - 2, 1);
+    let end = Math.min(start + maxVisible - 1, totalPages);
+
+    if (end - start < maxVisible - 1) {
+      start = Math.max(end - maxVisible + 1, 1);
+    }
+
+    if (start > 1) {
+      pages.push(1);
+      if (start > 2) pages.push("...");
+    }
+
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+
+    if (end < totalPages) {
+      if (end < totalPages - 1) pages.push("...");
+      pages.push(totalPages);
+    }
+
+    return pages;
+  };
 
   // ✅ VALIDATION
   const validate = () => {
@@ -79,13 +134,9 @@ const UserWithdraw = () => {
     return newErrors;
   };
 
-  // ✅ SUBMIT
   const handleSubmit = async () => {
     const err = validate();
-    if (Object.keys(err).length > 0) {
-      setErrors(err);
-      return;
-    }
+    if (Object.keys(err).length) return setErrors(err);
 
     try {
       await axios.post(
@@ -98,22 +149,13 @@ const UserWithdraw = () => {
       setForm({ walletType: "", currencyType: "", amount: "" });
       setErrors({});
       fetchData();
-
     } catch (err) {
       alert(err.response?.data?.message || "Error");
     }
   };
 
-  // ✅ FILTER
-  const filteredData = useMemo(() => {
-    return data.filter((item) =>
-      Object.values(item).join("").toLowerCase().includes(search.toLowerCase())
-    );
-  }, [search, data]);
-
   return (
     <div className="uwLayout">
-
       <Sidebar isOpen={isOpen} setIsOpen={setIsOpen} />
 
       <div className="main">
@@ -123,7 +165,7 @@ const UserWithdraw = () => {
 
           {/* HEADER */}
           <div className="uwHeader">
-            <h2 className="usrDeposit__title">Withdraw</h2>
+            <h2>Withdraw</h2>
             <button onClick={() => setShowModal(true)}>
               Create Withdraw
             </button>
@@ -133,7 +175,10 @@ const UserWithdraw = () => {
           <div className="uwSearch">
             <input
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
               placeholder="Search..."
             />
           </div>
@@ -145,31 +190,31 @@ const UserWithdraw = () => {
                 <tr>
                   <th>S.NO</th>
                   <th>CURRENCY</th>
-                  <th>TRANSACTION PROOF</th>
-                  <th>REQUEST AMOUNT</th>
-                  <th>APPROVED AMOUNT</th>
+                  <th>PROOF</th>
+                  <th>REQUEST</th>
+                  <th>APPROVED</th>
                   <th>STATUS</th>
-                  <th>CREATED AT</th>
-                  <th>ACTIONS</th>
+                  <th>CREATED</th>
                 </tr>
               </thead>
 
               <tbody>
-                {filteredData.length === 0 ? (
+                {paginatedData.length === 0 ? (
                   <tr>
-                    <td colSpan="8">No available options</td>
+                    <td colSpan="7">No data</td>
                   </tr>
                 ) : (
-                  filteredData.map((item, index) => (
+                  paginatedData.map((item, i) => (
                     <tr key={item.id}>
-                      <td>{index + 1}</td>
+                      <td>{(page - 1) * rowsPerPage + i + 1}</td>
                       <td>{item.currency}</td>
-                      <td className="uwHash">{item.proof}</td>
+                      <td>{item.proof}</td>
                       <td>{item.request}</td>
                       <td>{item.approved}</td>
-                      <td className="uwStatus">{item.status}</td>
-                      <td>{item.date}</td>
-                      <td>⋮</td>
+                      <td>{item.status}</td>
+                      <td>
+                        {new Date(item.date).toLocaleString()}
+                      </td>
                     </tr>
                   ))
                 )}
@@ -177,20 +222,57 @@ const UserWithdraw = () => {
             </table>
           </div>
 
+          {/* FOOTER */}
           <div className="usrDeposit__footer">
+
             <div className="usrDeposit__rows">
               Rows:
-              <select>
-                <option>10</option>
-                <option>25</option>
+              <select
+                value={rowsPerPage}
+                onChange={(e) => {
+                  setRowsPerPage(Number(e.target.value));
+                  setPage(1);
+                }}
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
               </select>
             </div>
 
             <div className="usrDeposit__pagination">
-              <button>{"< Prev"}</button>
-              <button className="active">1</button>
-              <button>{"Next >"}</button>
+
+              <button
+                disabled={page === 1}
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+              >
+                {"<"}
+              </button>
+
+              {getPagination().map((p, i) =>
+                p === "..." ? (
+                  <span key={i}>...</span>
+                ) : (
+                  <button
+                    key={i}
+                    className={page === p ? "active" : ""}
+                    onClick={() => setPage(p)}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
+
+              <button
+                disabled={page === totalPages}
+                onClick={() =>
+                  setPage(p => Math.min(totalPages, p + 1))
+                }
+              >
+                {">"}
+              </button>
+
             </div>
+
           </div>
 
         </div>

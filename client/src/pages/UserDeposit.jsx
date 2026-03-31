@@ -1,256 +1,276 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import Sidebar from "../components/user/UserSidebar";
 import Topbar from "../components/user/UserTopbar";
 
 const UserDeposit = () => {
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const [search, setSearch] = useState("");
-    const [activeDropdown, setActiveDropdown] = useState(null);
-    const [selectedRow, setSelectedRow] = useState(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [activeDropdown, setActiveDropdown] = useState(null);
+  const [selectedRow, setSelectedRow] = useState(null);
 
-    // ✅ REPLACED STATIC DATA WITH STATE
-    const [data, setData] = useState([]);
+  const [data, setData] = useState([]);
 
-    // ✅ FETCH DATA FROM DB
-    const fetchDeposits = async () => {
-        try {
-            const token = localStorage.getItem("token");
+  // ✅ PAGINATION
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
-            const res = await axios.get(
-                "http://localhost:5000/api/user-plans/deposits",
-                {
-                    headers: { Authorization: `Bearer ${token}` }
-                }
-            );
+  // ✅ FETCH DATA
+  const fetchDeposits = async () => {
+    try {
+      const token = localStorage.getItem("token");
 
-            // ✅ FORMAT DATA TO MATCH YOUR EXISTING UI
-            const formatted = (res.data || []).map((item) => ({
-                id: item.id,
-                from: item.from_user || "User",
-                fromId: item.from_id || "-",
-
-                // ✅ FIXED: NO DB FIELD, ALWAYS ADMIN
-                to: "Admin",
-                toId: "SYSTEM",
-
-                hash: item.hash || "N/A",
-                plan: item.plan_name,
-                amount: `$${item.amount}`,
-                date: item.created_at
-                    ? new Date(item.created_at).toLocaleString()
-                    : "-"
-            }));
-
-            setData(formatted);
-
-        } catch (err) {
-            console.error("Deposit fetch error:", err);
+      const res = await axios.get(
+        "http://localhost:5000/api/user-plans/deposits",
+        {
+          headers: { Authorization: `Bearer ${token}` }
         }
-    };
+      );
 
-    useEffect(() => {
-        fetchDeposits();
-    }, []);
+      const formatted = (res.data || []).map((item) => ({
+        id: item.id,
+        from: item.from_user || "User",
+        fromId: item.from_id || "-",
+        to: "Admin",
+        toId: "SYSTEM",
+        hash: item.hash || "N/A",
+        plan: item.plan_name,
+        amount: `$${item.amount}`,
+        date: item.created_at
+      }));
 
-    // ✅ SEARCH FILTER (LOGIC ONLY)
-    const filteredData = data.filter(item =>
-        item.from.toLowerCase().includes(search.toLowerCase()) ||
-        item.plan.toLowerCase().includes(search.toLowerCase())
+      setData(formatted);
+    } catch (err) {
+      console.error("Deposit fetch error:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchDeposits();
+  }, []);
+
+  // ✅ FILTER
+  const filteredData = useMemo(() => {
+    const q = search.toLowerCase();
+
+    return data.filter(item =>
+      item.from.toLowerCase().includes(q) ||
+      item.plan.toLowerCase().includes(q) ||
+      item.hash.toLowerCase().includes(q)
     );
+  }, [search, data]);
 
-    return (
-        <div className="usrDeposit__layoutWrapper">
+  // ✅ PAGINATION
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / rowsPerPage));
 
-            <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
+  const paginatedData = useMemo(() => {
+    const start = (page - 1) * rowsPerPage;
+    return filteredData.slice(start, start + rowsPerPage);
+  }, [filteredData, page, rowsPerPage]);
 
-            <div className="main">
+  useEffect(() => {
+    if (page > totalPages) setPage(1);
+  }, [totalPages, page]);
 
-                <Topbar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
+  // ✅ SMART PAGINATION
+  const getPagination = () => {
+    const pages = [];
+    const maxVisible = 5;
 
-                <div className="usrDeposit__contentArea">
+    let start = Math.max(page - 2, 1);
+    let end = Math.min(start + maxVisible - 1, totalPages);
 
-                    <div className="usrFirstContent">
-                        <h2 className="usrDeposit__title">Deposit List</h2>
+    if (end - start < maxVisible - 1) {
+      start = Math.max(end - maxVisible + 1, 1);
+    }
 
-                    {/* SEARCH */}
-                    <div className="usrDeposit__searchBox">
-                        <input
-                            type="text"
-                            placeholder="Search..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
-                    </div>
-                    </div>
+    if (start > 1) {
+      pages.push(1);
+      if (start > 2) pages.push("...");
+    }
 
-                    {/* TABLE */}
-                    <div className="usrDeposit__tableWrapper">
-                        <table className="usrDeposit__table">
-                            <thead>
-                                <tr>
-                                    <th>S.NO</th>
-                                    <th>FROM USER</th>
-                                    <th>TO USER</th>
-                                    <th>TRANSACTION HASH</th>
-                                    <th>PLAN NAME</th>
-                                    <th>AMOUNT</th>
-                                    <th>CREATED AT</th>
-                                    <th>ACTIONS</th>
-                                </tr>
-                            </thead>
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
 
-                            <tbody>
-                                {filteredData.length > 0 ? (
-                                    filteredData.map((item, index) => (
-                                        <tr key={item.id}>
-                                            <td>{index + 1}</td>
+    if (end < totalPages) {
+      if (end < totalPages - 1) pages.push("...");
+      pages.push(totalPages);
+    }
 
-                                            <td>
-                                                <p>{item.from}</p>
-                                                <span>{item.fromId}</span>
-                                            </td>
+    return pages;
+  };
 
-                                            <td>
-                                                <p>{item.to}</p>
-                                                <span>{item.toId}</span>
-                                            </td>
+  return (
+    <div className="usrDeposit__layoutWrapper">
+      <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
-                                            <td className="usrDeposit__hash">{item.hash}</td>
+      <div className="main">
+        <Topbar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
-                                            <td>{item.plan}</td>
+        <div className="usrDeposit__contentArea">
 
-                                            <td className="usrDeposit__amount">{item.amount}</td>
+          {/* HEADER */}
+          <div className="usrFirstContent">
+            <h2 className="usrDeposit__title">Deposit List</h2>
 
-                                            <td>{item.date}</td>
-
-                                            <td className="usrDeposit__actionCell">
-
-                                                <button
-                                                    className="usrDeposit__actionBtn"
-                                                    onClick={() =>
-                                                        setActiveDropdown(
-                                                            activeDropdown === item.id ? null : item.id
-                                                        )
-                                                    }
-                                                >
-                                                    ⋮
-                                                </button>
-
-                                                {activeDropdown === item.id && (
-                                                    <div className="usrDeposit__dropdown">
-                                                        <button
-                                                            onClick={() => {
-                                                                setSelectedRow(item);
-                                                                setActiveDropdown(null);
-                                                            }}
-                                                        >
-                                                            👁 View
-                                                        </button>
-                                                    </div>
-                                                )}
-
-                                            </td>
-                                        </tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan="8" style={{ textAlign: "center" }}>
-                                            No deposits found
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {/* MODAL */}
-                    {selectedRow && (
-                        <div className="usrDeposit__modalOverlay">
-                            <div className="usrDeposit__modalBox">
-
-                                <div className="usrDeposit__modalHeader">
-                                    <h3>Transaction Details</h3>
-                                    <button
-                                        onClick={() => setSelectedRow(null)}
-                                        className="usrDeposit__modalClose"
-                                    >
-                                        ✕
-                                    </button>
-                                </div>
-
-                                <div className="usrDeposit__modalGrid">
-
-                                    <div>
-                                        <label>From User</label>
-                                        <p>{selectedRow.from} ({selectedRow.fromId})</p>
-                                    </div>
-
-                                    <div>
-                                        <label>To User</label>
-                                        <p>{selectedRow.to} ({selectedRow.toId})</p>
-                                    </div>
-
-                                    <div>
-                                        <label>Plan</label>
-                                        <p>{selectedRow.plan}</p>
-                                    </div>
-
-                                    <div>
-                                        <label>Amount</label>
-                                        <p className="usrDeposit__highlightAmount">
-                                            {selectedRow.amount}
-                                        </p>
-                                    </div>
-
-                                    <div className="full">
-                                        <label>Transaction Hash</label>
-                                        <p className="usrDeposit__hash">
-                                            {selectedRow.hash}
-                                        </p>
-                                    </div>
-
-                                    <div className="full">
-                                        <label>Created At</label>
-                                        <p>{selectedRow.date}</p>
-                                    </div>
-
-                                </div>
-
-                                <div className="usrDeposit__modalFooter">
-                                    <button
-                                        onClick={() => setSelectedRow(null)}
-                                        className="usrDeposit__modalBtn"
-                                    >
-                                        Close
-                                    </button>
-                                </div>
-
-                            </div>
-                        </div>
-                    )}
-
-                    {/* FOOTER */}
-                    <div className="usrDeposit__footer">
-                        <div className="usrDeposit__rows">
-                            Rows:
-                            <select>
-                                <option>10</option>
-                                <option>25</option>
-                            </select>
-                        </div>
-
-                        <div className="usrDeposit__pagination">
-                            <button>{"< Prev"}</button>
-                            <button className="active">1</button>
-                            <button>{"Next >"}</button>
-                        </div>
-                    </div>
-
-                </div>
+            <div className="usrDeposit__searchBox">
+              <input
+                placeholder="Search..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+              />
             </div>
+          </div>
+
+          {/* TABLE */}
+          <div className="usrDeposit__tableWrapper">
+            <table className="usrDeposit__table">
+              <thead>
+                <tr>
+                  <th>S.NO</th>
+                  <th>FROM USER</th>
+                  <th>TO USER</th>
+                  <th>HASH</th>
+                  <th>PLAN</th>
+                  <th>AMOUNT</th>
+                  <th>CREATED</th>
+                  <th>ACTIONS</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {paginatedData.length === 0 ? (
+                  <tr>
+                    <td colSpan="8">No deposits found</td>
+                  </tr>
+                ) : (
+                  paginatedData.map((item, index) => (
+                    <tr key={item.id}>
+                      <td>{(page - 1) * rowsPerPage + index + 1}</td>
+
+                      <td>
+                        <p>{item.from}</p>
+                        <span>{item.fromId}</span>
+                      </td>
+
+                      <td>
+                        <p>{item.to}</p>
+                        <span>{item.toId}</span>
+                      </td>
+
+                      <td>{item.hash}</td>
+                      <td>{item.plan}</td>
+                      <td>{item.amount}</td>
+
+                      <td>
+                        {item.date
+                          ? new Date(item.date).toLocaleString()
+                          : "-"}
+                      </td>
+
+                      <td>
+                        <button
+                          onClick={() =>
+                            setActiveDropdown(
+                              activeDropdown === item.id ? null : item.id
+                            )
+                          }
+                        >
+                          ⋮
+                        </button>
+
+                        {activeDropdown === item.id && (
+                          <div>
+                            <button
+                              onClick={() => {
+                                setSelectedRow(item);
+                                setActiveDropdown(null);
+                              }}
+                            >
+                              View
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* MODAL */}
+          {selectedRow && (
+            <div className="usrDeposit__modalOverlay">
+              <div className="usrDeposit__modalBox">
+                <h3>Transaction Details</h3>
+                <p>{selectedRow.from} → {selectedRow.to}</p>
+                <p>{selectedRow.plan}</p>
+                <p>{selectedRow.amount}</p>
+                <button onClick={() => setSelectedRow(null)}>Close</button>
+              </div>
+            </div>
+          )}
+
+          {/* FOOTER */}
+          <div className="usrDeposit__footer">
+
+            <div className="usrDeposit__rows">
+              Rows:
+              <select
+                value={rowsPerPage}
+                onChange={(e) => {
+                  setRowsPerPage(Number(e.target.value));
+                  setPage(1);
+                }}
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+              </select>
+            </div>
+
+            <div className="usrDeposit__pagination">
+
+              <button
+                disabled={page === 1}
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+              >
+                {"<"}
+              </button>
+
+              {getPagination().map((p, i) =>
+                p === "..." ? (
+                  <span key={i}>...</span>
+                ) : (
+                  <button
+                    key={i}
+                    className={page === p ? "active" : ""}
+                    onClick={() => setPage(p)}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
+
+              <button
+                disabled={page === totalPages}
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              >
+                {">"}
+              </button>
+
+            </div>
+
+          </div>
+
         </div>
-    );
+      </div>
+    </div>
+  );
 };
 
 export default UserDeposit;

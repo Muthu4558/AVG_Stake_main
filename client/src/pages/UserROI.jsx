@@ -8,11 +8,10 @@ const UserROI = () => {
   const [search, setSearch] = useState("");
   const [data, setData] = useState([]);
 
-  // ✅ Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
-  // ✅ FETCH ROI HISTORY
+  // ✅ FETCH ROI
   const fetchROI = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -32,7 +31,7 @@ const UserROI = () => {
         toId: item.to_id || "-",
         type: "Daily ROI Income",
         amount: `$${Number(item.amount || 0).toFixed(2)}`,
-        date: new Date(item.created_at).toLocaleString(),
+        date: item.created_at,
       }));
 
       setData(formatted);
@@ -55,14 +54,42 @@ const UserROI = () => {
     );
   }, [search, data]);
 
-  // ✅ PAGINATION LOGIC
-  const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+  // ✅ PAGINATION
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / rowsPerPage));
 
   const paginatedData = useMemo(() => {
     const start = (currentPage - 1) * rowsPerPage;
-    const end = start + rowsPerPage;
-    return filteredData.slice(start, end);
+    return filteredData.slice(start, start + rowsPerPage);
   }, [filteredData, currentPage, rowsPerPage]);
+
+  // ✅ SMART PAGINATION
+  const getPagination = () => {
+    const pages = [];
+    const maxVisible = 5;
+
+    let start = Math.max(currentPage - 2, 1);
+    let end = Math.min(start + maxVisible - 1, totalPages);
+
+    if (end - start < maxVisible - 1) {
+      start = Math.max(end - maxVisible + 1, 1);
+    }
+
+    if (start > 1) {
+      pages.push(1);
+      if (start > 2) pages.push("...");
+    }
+
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+
+    if (end < totalPages) {
+      if (end < totalPages - 1) pages.push("...");
+      pages.push(totalPages);
+    }
+
+    return pages;
+  };
 
   return (
     <div className="uroiLayout">
@@ -79,12 +106,11 @@ const UserROI = () => {
 
             <div className="uroiSearch">
               <input
-                type="text"
                 placeholder="Search..."
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
-                  setCurrentPage(1); // reset page
+                  setCurrentPage(1);
                 }}
               />
             </div>
@@ -105,7 +131,11 @@ const UserROI = () => {
               </thead>
 
               <tbody>
-                {paginatedData.length > 0 ? (
+                {paginatedData.length === 0 ? (
+                  <tr>
+                    <td colSpan="6">No ROI data found</td>
+                  </tr>
+                ) : (
                   paginatedData.map((item, index) => (
                     <tr key={item.id}>
                       <td>
@@ -126,13 +156,13 @@ const UserROI = () => {
 
                       <td className="uroiAmount">{item.amount}</td>
 
-                      <td>{item.date}</td>
+                      <td>
+                        {item.date
+                          ? new Date(item.date).toLocaleString()
+                          : "-"}
+                      </td>
                     </tr>
                   ))
-                ) : (
-                  <tr>
-                    <td colSpan="6">No ROI data found</td>
-                  </tr>
                 )}
               </tbody>
             </table>
@@ -141,7 +171,6 @@ const UserROI = () => {
           {/* FOOTER */}
           <div className="usrDeposit__footer">
 
-            {/* ROWS */}
             <div className="usrDeposit__rows">
               Rows:
               <select
@@ -157,26 +186,31 @@ const UserROI = () => {
               </select>
             </div>
 
-            {/* PAGINATION */}
+            {/* ✅ CLEAN PAGINATION */}
             <div className="usrDeposit__pagination">
+
               <button
                 onClick={() =>
                   setCurrentPage((prev) => Math.max(prev - 1, 1))
                 }
                 disabled={currentPage === 1}
               >
-                {"< Prev"}
+                {"<"}
               </button>
 
-              {Array.from({ length: totalPages }, (_, i) => (
-                <button
-                  key={i}
-                  className={currentPage === i + 1 ? "active" : ""}
-                  onClick={() => setCurrentPage(i + 1)}
-                >
-                  {i + 1}
-                </button>
-              ))}
+              {getPagination().map((p, i) =>
+                p === "..." ? (
+                  <span key={i} className="dots">...</span>
+                ) : (
+                  <button
+                    key={i}
+                    className={currentPage === p ? "active" : ""}
+                    onClick={() => setCurrentPage(p)}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
 
               <button
                 onClick={() =>
@@ -184,10 +218,11 @@ const UserROI = () => {
                     Math.min(prev + 1, totalPages)
                   )
                 }
-                disabled={currentPage === totalPages || totalPages === 0}
+                disabled={currentPage === totalPages}
               >
-                {"Next >"}
+                {">"}
               </button>
+
             </div>
 
           </div>
