@@ -12321,173 +12321,134 @@ background: rgba(255,255,255,0.05);
 
 
 /* =========== my network ========== */
-/* LAYOUT */
-.treeLayout {
+/* ===== LAYOUT ===== */
+.networkLayout {
   display: flex;
-  overflow: auto;
+  height: 100vh;
+  /* background: #f5f7fb; */
 }
 
-.treeMain {
+.networkMain {
   flex: 1;
-  min-width: 0;
   display: flex;
   flex-direction: column;
 }
 
-.treeContent {
+.networkContent {
+  flex: 1;
   padding: 20px;
-  /* background: linear-gradient(135deg, #020c1b, #001a4d); */
-  min-height: 100vh;
-  color: white;
-
   overflow: auto;
-  scroll-behavior: smooth;
 }
 
-.treeTitle {
+/* ===== TITLE ===== */
+.pageTitle {
   text-align: center;
-  margin-top: 70px;
-  margin-bottom: 30px;
+  margin-bottom: 20px;
+  font-size: 20px;
+  font-weight: 600;
+  color: #1f2937;
 }
 
-/* TREE WRAPPER */
-.treeWrapper {
-  display: inline-block;   /* ✅ important */
-  min-width: max-content;  /* ✅ allows horizontal expansion */
+/* ===== LOADING ===== */
+.loadingText {
+  text-align: center;
+  margin-top: 60px;
+  font-size: 16px;
+  color: #6b7280;
 }
 
-/* NODE */
-.treeNode {
+/* ===== NODE CARD ===== */
+.nodeCard {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 10px 12px;
+  width: 160px;
+
   display: flex;
   flex-direction: column;
-  align-items: center;
-  position: relative;
+  justify-content: space-between;
+
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+
+  transition: all 0.2s ease;
 }
 
-/* CARD */
-.treeCard {
-  background: linear-gradient(145deg, #1a3b6f, #244a85);
-  padding: 12px 18px;
-  border-radius: 14px;
-  min-width: 180px;
+.nodeCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+}
+
+/* ===== HEADER ===== */
+.nodeHeader {
   display: flex;
   align-items: center;
   gap: 10px;
-  cursor: pointer;
-  position: relative;
-  transition: 0.3s;
-  box-shadow: 0 15px 30px rgba(0,0,0,0.4);
 }
 
-.treeCard:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 20px 40px rgba(0,0,0,0.6);
-}
-
-/* AVATAR */
-.treeAvatar {
+/* ===== AVATAR ===== */
+.avatar {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: #22c55e;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: #fff;
+
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
-}
 
-/* INFO */
-.treeInfo h4 {
-  margin: 0;
   font-size: 14px;
-}
-
-.treeInfo p {
-  margin: 0;
-  font-size: 11px;
-  color: #aaa;
-}
-
-/* WALLET */
-.treeWallet {
-  margin-left: auto;
-  color: #00e676;
   font-weight: bold;
 }
 
-/* TOGGLE */
-.treeToggle {
-  margin-left: 6px;
-  transition: 0.3s;
+/* ===== TEXT ===== */
+.nodeText .name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
 }
 
-.treeToggle.open {
-  transform: rotate(180deg);
+.nodeText .id {
+  font-size: 11px;
+  color: #6b7280;
 }
 
-/* CHILDREN */
-.treeChildren {
-  margin-top: 30px;
-  display: flex;
-  gap: 30px;
-  position: relative;
+/* ===== WALLET ===== */
+.wallet {
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: bold;
+  color: #16a34a;
+  text-align: right;
 }
 
-/* CONNECTOR LINE */
-.treeChildren::before {
-  content: "";
-  position: absolute;
-  top: -15px;
-  left: 50%;
-  width: 2px;
-  height: 15px;
-  background: rgba(255,255,255,0.2);
+/* ===== TREE LINKS ===== */
+.rd3t-link {
+  stroke: #cbd5e1 !important;
+  stroke-width: 2px !important;
 }
 
-/* CHILD LINE */
-.treeNode > .treeChildren > .treeNode::before {
-  content: "";
-  position: absolute;
-  top: -30px;
-  width: 2px;
-  height: 30px;
-  background: rgba(255,255,255,0.2);
+/* ===== SCROLLBAR ===== */
+.networkContent::-webkit-scrollbar {
+  width: 6px;
 }
 
-/* MOBILE */
+.networkContent::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+/* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
-  .treeChildren {
-    flex-direction: column;
-    align-items: center;
+  .nodeCard {
+    width: 140px;
+  }
+
+  .pageTitle {
+    font-size: 16px;
   }
 }
-
-/* ZOOM CONTROLS */
-.zoomControls {
-  text-align: center;
-  margin-bottom: 20px;
-}
-
-.zoomControls button {
-  padding: 6px 12px;
-  margin: 0 5px;
-  border: none;
-  border-radius: 6px;
-  background: #244a85;
-  color: #fff;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-.zoomControls button:hover {
-  background: #3b82f6;
-}
-
-.zoomControls span {
-  margin: 0 10px;
-  font-weight: bold;
-}
-
 
 /* =========== user profile */
 .u3Layout {
