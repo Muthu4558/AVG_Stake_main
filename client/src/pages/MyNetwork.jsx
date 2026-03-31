@@ -13,7 +13,6 @@ const TreeNode = ({ node }) => {
   return (
     <div className="treeNode">
 
-      {/* CARD */}
       <div className="treeCard" onClick={() => setOpen(!open)}>
         <div className="treeAvatar">
           {(node.name || "U")[0]}
@@ -35,7 +34,6 @@ const TreeNode = ({ node }) => {
         )}
       </div>
 
-      {/* CHILDREN */}
       {node.children && open && (
         <div className="treeChildren">
           {node.children.map((child, i) => (
@@ -51,6 +49,7 @@ const TreeNode = ({ node }) => {
 const MyNetwork = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [data, setData] = useState(null);
+  const [zoom, setZoom] = useState(1);
 
   const API = "http://localhost:5000/api/users";
 
@@ -64,7 +63,6 @@ const MyNetwork = () => {
       });
 
       setData(res.data);
-
     } catch (err) {
       console.error(err);
       toast.error("Failed to load network");
@@ -73,6 +71,34 @@ const MyNetwork = () => {
 
   useEffect(() => {
     fetchNetwork();
+  }, []);
+
+  // ================= ZOOM FUNCTIONS =================
+  const zoomIn = () => {
+    setZoom((prev) => Math.min(prev + 0.2, 2));
+  };
+
+  const zoomOut = () => {
+    setZoom((prev) => Math.max(prev - 0.2, 0.5));
+  };
+
+  const resetZoom = () => {
+    setZoom(1);
+  };
+
+  // ================= MOUSE WHEEL ZOOM =================
+  useEffect(() => {
+    const handleWheel = (e) => {
+      if (e.ctrlKey) {
+        e.preventDefault();
+        if (e.deltaY < 0) zoomIn();
+        else zoomOut();
+      }
+    };
+
+    window.addEventListener("wheel", handleWheel, { passive: false });
+
+    return () => window.removeEventListener("wheel", handleWheel);
   }, []);
 
   return (
@@ -86,7 +112,22 @@ const MyNetwork = () => {
         <div className="treeContent">
           <h2 className="treeTitle">Referral Tree</h2>
 
-          <div className="treeWrapper">
+          {/* ZOOM CONTROLS */}
+          <div className="zoomControls">
+            <button onClick={zoomOut}>-</button>
+            <span>{Math.round(zoom * 100)}%</span>
+            <button onClick={zoomIn}>+</button>
+            <button onClick={resetZoom}>Reset</button>
+          </div>
+
+          <div
+            className="treeWrapper"
+            style={{
+              transform: `scale(${zoom})`,
+              transformOrigin: "top center",
+              transition: "0.3s ease",
+            }}
+          >
             {data ? (
               <TreeNode node={data} />
             ) : (

@@ -12324,7 +12324,7 @@ background: rgba(255,255,255,0.05);
 /* LAYOUT */
 .treeLayout {
   display: flex;
-  overflow: hidden;
+  overflow: auto;
 }
 
 .treeMain {
@@ -12339,6 +12339,9 @@ background: rgba(255,255,255,0.05);
   /* background: linear-gradient(135deg, #020c1b, #001a4d); */
   min-height: 100vh;
   color: white;
+
+  overflow: auto;
+  scroll-behavior: smooth;
 }
 
 .treeTitle {
@@ -12349,8 +12352,8 @@ background: rgba(255,255,255,0.05);
 
 /* TREE WRAPPER */
 .treeWrapper {
-  display: flex;
-  justify-content: center;
+  display: inline-block;   /* ✅ important */
+  min-width: max-content;  /* ✅ allows horizontal expansion */
 }
 
 /* NODE */
@@ -12457,6 +12460,32 @@ background: rgba(255,255,255,0.05);
     flex-direction: column;
     align-items: center;
   }
+}
+
+/* ZOOM CONTROLS */
+.zoomControls {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.zoomControls button {
+  padding: 6px 12px;
+  margin: 0 5px;
+  border: none;
+  border-radius: 6px;
+  background: #244a85;
+  color: #fff;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.zoomControls button:hover {
+  background: #3b82f6;
+}
+
+.zoomControls span {
+  margin: 0 10px;
+  font-weight: bold;
 }
 
 

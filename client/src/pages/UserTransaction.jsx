@@ -8,7 +8,6 @@ const UserTransaction = () => {
   const [search, setSearch] = useState("");
   const [data, setData] = useState([]);
 
-  // ✅ Pagination States
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
@@ -17,25 +16,56 @@ const UserTransaction = () => {
   // ✅ FETCH DATA
   const fetchTransactions = async () => {
     try {
-      const res = await axios.get(
-        "http://localhost:5000/api/user-plans/transactions",
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
+      const [txRes, directRes, levelRes] = await Promise.all([
+        axios.get("http://localhost:5000/api/user-plans/transactions", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axios.get("http://localhost:5000/api/users/my-direct-income", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axios.get("http://localhost:5000/api/users/my-level-income", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
 
-      const formatted = (res.data || []).map((item) => ({
-        id: item.id,
+      const txData = (txRes.data || []).map((item) => ({
+        id: `T-${item.id}`,
         from: item.from_user || "-",
         fromId: item.from_id || "-",
         to: item.to_user || "-",
         toId: item.to_id || "-",
-        type: item.type || "-",
+        type: item.type || "Transaction",
         amount: `$${Number(item.amount || 0).toFixed(2)}`,
-        date: new Date(item.created_at).toLocaleString(),
+        date: item.created_at,
       }));
 
-      setData(formatted);
+      const directData = (directRes.data || []).map((item) => ({
+        id: `D-${item.id}`,
+        from: item.from || "-",
+        fromId: item.fromId || "-",
+        to: item.to || "-",
+        toId: item.toId || "-",
+        type: "Direct Income",
+        amount: `$${Number(item.amount || 0).toFixed(2)}`,
+        date: item.date || item.created_at,
+      }));
+
+      const levelData = (levelRes.data || []).map((item) => ({
+        id: `L-${item.id}`,
+        from: item.from || "-",
+        fromId: item.fromId || "-",
+        to: item.to || "-",
+        toId: item.toId || "-",
+        type: `Level ${item.level || ""}`,
+        amount: `$${Number(item.amount || 0).toFixed(2)}`,
+        date: item.date || item.created_at,
+      }));
+
+      const merged = [...txData, ...directData, ...levelData].sort(
+        (a, b) => new Date(b.date) - new Date(a.date)
+      );
+
+      setData(merged);
     } catch (err) {
       console.error("Transaction fetch error:", err);
     }
@@ -45,7 +75,7 @@ const UserTransaction = () => {
     fetchTransactions();
   }, []);
 
-  // ✅ FILTER DATA
+  // ✅ FILTER
   const filtered = useMemo(() => {
     return data.filter((item) =>
       item.type.toLowerCase().includes(search.toLowerCase()) ||
@@ -54,14 +84,42 @@ const UserTransaction = () => {
     );
   }, [search, data]);
 
-  // ✅ PAGINATION LOGIC
+  // ✅ PAGINATION
   const totalPages = Math.ceil(filtered.length / rowsPerPage);
 
   const paginatedData = useMemo(() => {
     const start = (currentPage - 1) * rowsPerPage;
-    const end = start + rowsPerPage;
-    return filtered.slice(start, end);
+    return filtered.slice(start, start + rowsPerPage);
   }, [filtered, currentPage, rowsPerPage]);
+
+  // ✅ SMART PAGINATION
+  const getPagination = () => {
+    const pages = [];
+    const maxVisible = 5;
+
+    let start = Math.max(currentPage - 2, 1);
+    let end = Math.min(start + maxVisible - 1, totalPages);
+
+    if (end - start < maxVisible - 1) {
+      start = Math.max(end - maxVisible + 1, 1);
+    }
+
+    if (start > 1) {
+      pages.push(1);
+      if (start > 2) pages.push("...");
+    }
+
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+
+    if (end < totalPages) {
+      if (end < totalPages - 1) pages.push("...");
+      pages.push(totalPages);
+    }
+
+    return pages;
+  };
 
   return (
     <div className="utxLayout">
@@ -72,9 +130,8 @@ const UserTransaction = () => {
 
         <div className="utxContent">
 
-          {/* HEADER */}
           <div className="utxFirstContent">
-            <h2 className="utxTitle">Transaction List</h2>
+            <h2 className="utxTitle">All Transactions</h2>
 
             <div className="utxSearch">
               <input
@@ -82,13 +139,12 @@ const UserTransaction = () => {
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
-                  setCurrentPage(1); // reset page
+                  setCurrentPage(1);
                 }}
               />
             </div>
           </div>
 
-          {/* TABLE */}
           <div className="utxTableWrapper">
             <table className="utxTable">
               <thead>
@@ -113,20 +169,21 @@ const UserTransaction = () => {
                       <td>
                         {(currentPage - 1) * rowsPerPage + index + 1}
                       </td>
-
                       <td>
                         <p>{item.from}</p>
                         <span>{item.fromId}</span>
                       </td>
-
                       <td>
                         <p>{item.to}</p>
                         <span>{item.toId}</span>
                       </td>
-
                       <td>{item.type}</td>
                       <td className="utxAmount">{item.amount}</td>
-                      <td>{item.date}</td>
+                      <td>
+                        {item.date
+                          ? new Date(item.date).toLocaleString()
+                          : "-"}
+                      </td>
                     </tr>
                   ))
                 )}
@@ -134,10 +191,9 @@ const UserTransaction = () => {
             </table>
           </div>
 
-          {/* FOOTER */}
+          {/* ✅ CLEAN PAGINATION */}
           <div className="usrDeposit__footer">
 
-            {/* ROWS */}
             <div className="usrDeposit__rows">
               Rows:
               <select
@@ -153,26 +209,30 @@ const UserTransaction = () => {
               </select>
             </div>
 
-            {/* PAGINATION */}
             <div className="usrDeposit__pagination">
+
               <button
                 onClick={() =>
                   setCurrentPage((prev) => Math.max(prev - 1, 1))
                 }
                 disabled={currentPage === 1}
               >
-                {"< Prev"}
+                {"<"}
               </button>
 
-              {Array.from({ length: totalPages }, (_, i) => (
-                <button
-                  key={i}
-                  className={currentPage === i + 1 ? "active" : ""}
-                  onClick={() => setCurrentPage(i + 1)}
-                >
-                  {i + 1}
-                </button>
-              ))}
+              {getPagination().map((p, i) =>
+                p === "..." ? (
+                  <span key={i} className="dots">...</span>
+                ) : (
+                  <button
+                    key={i}
+                    className={currentPage === p ? "active" : ""}
+                    onClick={() => setCurrentPage(p)}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
 
               <button
                 onClick={() =>
@@ -180,10 +240,11 @@ const UserTransaction = () => {
                     Math.min(prev + 1, totalPages)
                   )
                 }
-                disabled={currentPage === totalPages || totalPages === 0}
+                disabled={currentPage === totalPages}
               >
-                {"Next >"}
+                {">"}
               </button>
+
             </div>
 
           </div>

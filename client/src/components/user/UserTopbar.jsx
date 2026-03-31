@@ -78,9 +78,9 @@ const Topbar = ({ isOpen, setIsOpen }) => {
                 User Code: {user?.user_code || "N/A"}
               </p>
 
-              <p className="utb-referral">
+              {/* <p className="utb-referral">
                 Referral: {user?.referral_code || "N/A"}
-              </p>
+              </p> */}
 
               <p className="utb-wallet">
                 Wallet Balance:{" "}
