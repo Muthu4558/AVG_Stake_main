@@ -90,7 +90,7 @@ export const getMyProfile = async (req, res) => {
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
     const result = await pool.query(
-      `SELECT id, name, lastname, email, phone, user_code, referral_code, wallet_address
+      `SELECT id, name, lastname, email, phone, user_code, wallet_address
        FROM users WHERE id = $1`,
       [userId]
     );
@@ -195,19 +195,18 @@ export const getAllReferrals = async (req, res) => {
 
         u2.name AS referrer_name,
         u2.lastname AS referrer_lastname,
-        u2.phone AS referrer_phone
+        u2.phone AS referrer_phone,
+        u2.user_code AS referrer_code
 
       FROM users u1
-
       LEFT JOIN users u2 
-        ON u1.referred_by::int = u2.id   -- ✅ ONLY STRING MATCH
+        ON u1.referred_by = u2.user_code
 
       WHERE u1.referred_by IS NOT NULL
       ORDER BY u1.created_at DESC
     `);
 
     res.json(result.rows);
-
   } catch (err) {
     console.error("getAllReferrals error:", err);
     res.status(500).json({ error: err.message });
@@ -482,21 +481,32 @@ export const getMyReferrals = async (req, res) => {
   try {
     const userId = req.user.id;
 
+    const me = await pool.query(
+      `SELECT user_code FROM users WHERE id = $1`,
+      [userId]
+    );
+
+    if (!me.rows[0]) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const myCode = me.rows[0].user_code;
+
     const result = await pool.query(
       `SELECT 
         id,
         name AS username,
         lastname,
         phone,
-        created_at
+        created_at,
+        user_code
       FROM users
-      WHERE referred_by = $1   -- ✅ FIXED
+      WHERE referred_by = $1
       ORDER BY created_at DESC`,
-      [userId]
+      [myCode]
     );
 
     res.json(result.rows);
-
   } catch (err) {
     console.error("getMyReferrals error:", err);
     res.status(500).json({ error: err.message });
@@ -508,7 +518,6 @@ export const getMyNetwork = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // ✅ FUNCTION TO CALCULATE WALLET
     const getWallet = async (uid) => {
       const result = await pool.query(
         `
@@ -516,54 +525,46 @@ export const getMyNetwork = async (req, res) => {
           COALESCE(roi.total,0) AS roi,
           COALESCE(direct.total,0) AS direct,
           COALESCE(level.total,0) AS level
-
         FROM users u
-
         LEFT JOIN (
           SELECT user_id, SUM(total_earned) AS total
           FROM roi_transactions
           GROUP BY user_id
         ) roi ON roi.user_id = u.id
-
         LEFT JOIN (
           SELECT user_id, SUM(amount) AS total
           FROM level_income
           WHERE income_type IN ('direct','plan_direct')
           GROUP BY user_id
         ) direct ON direct.user_id = u.id
-
         LEFT JOIN (
           SELECT user_id, SUM(amount) AS total
           FROM level_income
           WHERE income_type = 'level'
           GROUP BY user_id
         ) level ON level.user_id = u.id
-
         WHERE u.id = $1
         `,
         [uid]
       );
 
       const row = result.rows[0];
-
       return Number(row.roi) + Number(row.direct) + Number(row.level);
     };
 
-    // ✅ ROOT USER
     const rootRes = await pool.query(
-      `SELECT id, name, lastname FROM users WHERE id=$1`,
+      `SELECT id, name, lastname, user_code FROM users WHERE id=$1`,
       [userId]
     );
 
     const rootUser = rootRes.rows[0];
 
-    // ✅ RECURSIVE TREE
-    const buildTree = async (parentId) => {
+    const buildTree = async (parentCode) => {
       const result = await pool.query(
-        `SELECT id, name, lastname 
+        `SELECT id, name, lastname, user_code 
          FROM users 
-         WHERE referred_by=$1`,
-        [parentId]
+         WHERE referred_by = $1`,
+        [parentCode]
       );
 
       return Promise.all(
@@ -571,8 +572,9 @@ export const getMyNetwork = async (req, res) => {
           name: child.name,
           lastname: child.lastname,
           id: child.id,
-          wallet: await getWallet(child.id), // 🔥 REAL WALLET
-          children: await buildTree(child.id),
+          user_code: child.user_code,
+          wallet: await getWallet(child.id),
+          children: await buildTree(child.user_code),
         }))
       );
     };
@@ -581,12 +583,12 @@ export const getMyNetwork = async (req, res) => {
       name: rootUser.name,
       lastname: rootUser.lastname,
       id: rootUser.id,
-      wallet: await getWallet(userId), // 🔥 MATCHES TOPBAR
-      children: await buildTree(userId),
+      user_code: rootUser.user_code,
+      wallet: await getWallet(userId),
+      children: await buildTree(rootUser.user_code),
     };
 
     res.json(tree);
-
   } catch (err) {
     console.error("getMyNetwork error:", err);
     res.status(500).json({ error: err.message });
@@ -930,7 +932,6 @@ export const getAdminDashboard = async (req, res) => {
 
 export const getAdminWallet = async (req, res) => {
   try {
-    // ✅ ROI
     const roiRes = await pool.query(`
       SELECT COALESCE(SUM(total_earned),0) AS total 
       FROM roi_transactions
@@ -938,7 +939,6 @@ export const getAdminWallet = async (req, res) => {
 
     const roi = Number(roiRes.rows[0].total);
 
-    // ✅ DIRECT + LEVEL
     const incomeRes = await pool.query(`
       WITH RECURSIVE referral_tree AS (
         SELECT id, user_code, 1 AS level
@@ -951,7 +951,6 @@ export const getAdminWallet = async (req, res) => {
         FROM users u
         JOIN referral_tree rt ON u.referred_by = rt.user_code
       )
-
       SELECT 
         rt.level,
         p.amount,
@@ -979,7 +978,6 @@ export const getAdminWallet = async (req, res) => {
       level,
       total,
     });
-
   } catch (err) {
     console.error("admin wallet error:", err);
     res.status(500).json({ error: err.message });
@@ -993,15 +991,16 @@ export const getMyTeamBusiness = async (req, res) => {
     const result = await pool.query(
       `
       WITH RECURSIVE team AS (
-        SELECT id FROM users WHERE id = $1
+        SELECT id, user_code
+        FROM users
+        WHERE id = $1
 
         UNION ALL
 
-        SELECT u.id
+        SELECT u.id, u.user_code
         FROM users u
-        JOIN team t ON u.referred_by::int = t.id
+        JOIN team t ON u.referred_by = t.user_code
       )
-
       SELECT 
         COALESCE(SUM(amount),0) AS total_business,
         COALESCE(SUM(amount) FILTER (WHERE DATE(created_at)=CURRENT_DATE),0) AS today_business
@@ -1015,7 +1014,6 @@ export const getMyTeamBusiness = async (req, res) => {
       teamBusiness: Number(result.rows[0].total_business),
       todayBusiness: Number(result.rows[0].today_business),
     });
-
   } catch (err) {
     console.error("getMyTeamBusiness error:", err);
     res.status(500).json({ error: err.message });

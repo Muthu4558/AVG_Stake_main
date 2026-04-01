@@ -8,13 +8,12 @@ export const createUser = async ({
   lastname,
   email,
   phone,
-  referral_code,
-  referred_by
+  referred_by = null, // stores referrer's user_code
 }) => {
   const query = `
     INSERT INTO users 
-    (user_code, password, role, name, lastname, email, phone, referral_code, referred_by)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+    (user_code, password, role, name, lastname, email, phone, referred_by)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
     RETURNING *;
   `;
 
@@ -26,8 +25,7 @@ export const createUser = async ({
     lastname || "",
     email,
     phone,
-    referral_code,
-    referred_by || null
+    referred_by,
   ];
 
   const result = await pool.query(query, values);
@@ -42,10 +40,11 @@ export const findUserByEmail = async (email) => {
   return result.rows[0];
 };
 
-export const findUserByReferral = async (referral_code) => {
+// now checks user_code, not referral_code
+export const findUserByReferral = async (user_code) => {
   const result = await pool.query(
-    "SELECT * FROM users WHERE referral_code = $1",
-    [referral_code]
+    "SELECT * FROM users WHERE user_code = $1",
+    [user_code]
   );
   return result.rows[0];
 };

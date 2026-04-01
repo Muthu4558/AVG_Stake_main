@@ -19,9 +19,9 @@ const cleanUserCode = (val) => {
 
   return val
     .toString()
-    .replace(/\s+/g, "")     // remove spaces
-    .replace(/[^a-zA-Z0-9]/g, "") // remove special chars
-    .slice(0, 20);           // 🔥 VERY IMPORTANT
+    .replace(/\s+/g, "")
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .slice(0, 20);
 };
 
 const importUsers = async () => {
@@ -42,17 +42,12 @@ const importUsers = async () => {
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
 
-      let userCode = cleanUserCode(row[1]);
-
+      const userCode = cleanUserCode(row[1]);
       if (!userCode) continue;
 
-      // 🔁 Excel duplicate
-      if (seen.has(userCode)) {
-        continue;
-      }
+      if (seen.has(userCode)) continue;
       seen.add(userCode);
 
-      // 🔍 DB duplicate
       const exists = await client.query(
         "SELECT id FROM users WHERE user_code = $1",
         [userCode]
@@ -67,51 +62,54 @@ const importUsers = async () => {
         10
       );
 
-      // DATE FIX
       let createdAt = new Date();
       if (row[3]) {
-        const parsed = moment(row[3], ["D/M/YYYY, h:mm:ss a"], true);
+        const parsed = moment(row[3], ["D/M/YYYY, h:mm:ss a", moment.ISO_8601], true);
         if (parsed.isValid()) createdAt = parsed.toDate();
       }
 
-      // PHONE FIX
       let phone = row[8];
       if (phone) {
-        phone = typeof phone === "number"
-          ? Math.round(phone).toString()
-          : phone.toString();
+        phone =
+          typeof phone === "number"
+            ? Math.round(phone).toString()
+            : phone.toString();
 
         phone = phone.replace(/\D/g, "").slice(0, 15);
       }
 
-      const email = row[7]
-        ? row[7].toString().trim().slice(0, 100)
-        : null;
+      const email = row[7] ? row[7].toString().trim().slice(0, 100) : null;
 
       const name = row[5]
         ? row[5].toString().replace(/\n/g, "").trim().slice(0, 50)
         : "User";
+
+      const lastname = row[6]
+        ? row[6].toString().replace(/\n/g, "").trim().slice(0, 50)
+        : "";
 
       const status =
         row[11] === true ||
         row[11] === "TRUE" ||
         row[11] === "true";
 
+      // old Excel "reffered_by" column is treated as inviter's user_code
+      const referred_by = cleanUserCode(row[10]) || null;
+
       await client.query(
         `INSERT INTO users 
-        (user_code, password, created_at, role, name, lastname, email, phone, referral_code, referred_by, status, wallet_address)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+          (user_code, password, created_at, role, name, lastname, email, phone, referred_by, status, wallet_address)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
         [
           userCode,
           hashedPassword,
           createdAt,
           row[4] || "user",
           name,
-          row[6] || null,
+          lastname,
           email,
           phone,
-          row[9] || null,
-          row[10] || null,
+          referred_by,
           status,
           row[12] || null,
         ]

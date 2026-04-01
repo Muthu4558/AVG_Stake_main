@@ -1,28 +1,29 @@
-import React, { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import logo from '../assets/logo.png';
-import axios from 'axios';
+import React, { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import logo from "../assets/logo.png";
+import axios from "axios";
 import { toast } from "react-hot-toast";
 
 const NAVBAR = () => {
   const navigate = useNavigate();
   const location = useLocation();
+
   const [createdUserCode, setCreatedUserCode] = useState("");
   const [showUserCodeModal, setShowUserCodeModal] = useState(false);
 
   const [loginData, setLoginData] = useState({
-    user_code: '',
-    password: '',
+    user_code: "",
+    password: "",
   });
 
   const [signupData, setSignupData] = useState({
-    name: '',
-    lastname: '',
-    email: '',
-    phone: '',
-    password: '',
-    confirmPassword: '',
-    referralCode: '',
+    name: "",
+    lastname: "",
+    email: "",
+    phone: "",
+    password: "",
+    confirmPassword: "",
+    referralCode: "",
   });
 
   const [loading, setLoading] = useState(false);
@@ -30,13 +31,14 @@ const NAVBAR = () => {
   const [showSignup, setShowSignup] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showLoginPassword, setShowLoginPassword] = useState(false);
-  const [showSignupPassword, setShowSignupPassword] = useState(false);
-  const [showSignupConfirmPassword, setShowSignupConfirmPassword] = useState(false);
 
-  /* ================= AUTO OPEN SIGNUP FROM REFERRAL LINK ================= */
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const referralCode = params.get("referral_code") || params.get("ref") || "";
+    const referralCode =
+      params.get("ref") ||
+      params.get("user_code") ||
+      params.get("referral_code") ||
+      "";
 
     if (referralCode) {
       setSignupData((prev) => ({
@@ -48,11 +50,10 @@ const NAVBAR = () => {
     }
   }, [location.search]);
 
-  /* ================= SCROLL ================= */
   const handleScroll = (sectionId) => {
     setMobileMenuOpen(false);
 
-    if (location.pathname !== '/') {
+    if (location.pathname !== "/") {
       window.location.href = `/#${sectionId}`;
       return;
     }
@@ -64,7 +65,7 @@ const NAVBAR = () => {
 
       window.scrollTo({
         top: elementPosition,
-        behavior: 'smooth',
+        behavior: "smooth",
       });
     }
   };
@@ -80,7 +81,6 @@ const NAVBAR = () => {
     return scrollPosition >= top && scrollPosition < bottom;
   };
 
-  /* ================= LOGIN INPUT ================= */
   const handleLoginChange = (e) => {
     setLoginData({
       ...loginData,
@@ -88,7 +88,6 @@ const NAVBAR = () => {
     });
   };
 
-  /* ================= SIGNUP INPUT ================= */
   const handleSignupChange = (e) => {
     setSignupData({
       ...signupData,
@@ -96,7 +95,6 @@ const NAVBAR = () => {
     });
   };
 
-  /* ================= LOGIN ================= */
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
 
@@ -107,22 +105,22 @@ const NAVBAR = () => {
     try {
       setLoading(true);
 
-      const res = await axios.post('http://localhost:5000/api/auth/login', {
-        user_code: loginData.user_code, // reuse field or rename UI later
+      const res = await axios.post("http://localhost:5000/api/auth/login", {
+        user_code: loginData.user_code,
         password: loginData.password,
       });
 
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('role', res.data.role);
-      localStorage.setItem('user_code', res.data.user_code || '');
+      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("role", res.data.role);
+      localStorage.setItem("user_code", res.data.user_code || "");
 
       setShowLogin(false);
       toast.success("Login successful 🎉");
 
-      if (res.data.role === 'admin') {
-        navigate('/dashboard');
+      if (res.data.role === "admin") {
+        navigate("/dashboard");
       } else {
-        navigate('/user-dashboard');
+        navigate("/user-dashboard");
       }
     } catch (err) {
       toast.error(err.response?.data?.message || "Invalid credentials ❌");
@@ -131,7 +129,6 @@ const NAVBAR = () => {
     }
   };
 
-  /* ================= SIGNUP ================= */
   const handleSignupSubmit = async (e) => {
     e.preventDefault();
 
@@ -156,7 +153,7 @@ const NAVBAR = () => {
     try {
       setLoading(true);
 
-      const res = await axios.post('http://localhost:5000/api/auth/signup', {
+      const res = await axios.post("http://localhost:5000/api/auth/signup", {
         name,
         lastname,
         email,
@@ -165,20 +162,19 @@ const NAVBAR = () => {
         referralCode: referralCode.trim() || undefined,
       });
 
-      // ✅ SAVE USER CODE
-      setCreatedUserCode(res.data.user_code);
+      setCreatedUserCode(res.data.user_code || "");
       setShowUserCodeModal(true);
 
       toast.success("Signup successful 🎉 Please log in");
 
       setSignupData({
-        name: '',
-        lastname: '',
-        email: '',
-        phone: '',
-        password: '',
-        confirmPassword: '',
-        referralCode: signupData.referralCode || '',
+        name: "",
+        lastname: "",
+        email: "",
+        phone: "",
+        password: "",
+        confirmPassword: "",
+        referralCode: signupData.referralCode || "",
       });
     } catch (err) {
       toast.error(err.response?.data?.message || "Signup failed ❌");
@@ -197,47 +193,47 @@ const NAVBAR = () => {
     setShowSignup(true);
   };
 
+  const referralLink = createdUserCode
+    ? `${window.location.origin}/auth/registration?referral_code=${encodeURIComponent(
+        createdUserCode
+      )}`
+    : "";
+
   return (
     <>
-      {/* NAVBAR */}
       <nav className="navbar">
         <div className="nav-container">
-
-          {/* LOGO */}
           <div
             className="logo-section"
             onClick={() => {
-              handleScroll('home');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
+              handleScroll("home");
+              window.scrollTo({ top: 0, behavior: "smooth" });
             }}
           >
             <img src={logo} alt="AVG Logo" className="logo" />
             <span className="brand-name">AVG</span>
           </div>
 
-          {/* HAMBURGER */}
           <div
             className="hamburger"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
-            <div className={`hamburger-line ${mobileMenuOpen ? 'open' : ''}`} />
-            <div className={`hamburger-line ${mobileMenuOpen ? 'open' : ''}`} />
-            <div className={`hamburger-line ${mobileMenuOpen ? 'open' : ''}`} />
+            <div className={`hamburger-line ${mobileMenuOpen ? "open" : ""}`} />
+            <div className={`hamburger-line ${mobileMenuOpen ? "open" : ""}`} />
+            <div className={`hamburger-line ${mobileMenuOpen ? "open" : ""}`} />
           </div>
 
-          {/* NAV LINKS */}
-          <ul className={`nav-links ${mobileMenuOpen ? 'mobile-open' : ''}`}>
-            {['home', 'about', 'plan', 'roadmap', 'features', 'faq'].map((item) => (
+          <ul className={`nav-links ${mobileMenuOpen ? "mobile-open" : ""}`}>
+            {["home", "about", "plan", "roadmap", "features", "faq"].map((item) => (
               <li
                 key={item}
-                className={`nav-item ${isActive(item) ? 'active' : ''}`}
+                className={`nav-item ${isActive(item) ? "active" : ""}`}
                 onClick={() => handleScroll(item)}
               >
                 {item.charAt(0).toUpperCase() + item.slice(1)}
               </li>
             ))}
 
-            {/* MOBILE LOGIN */}
             <li
               className="nav-item mobile-login-btn"
               onClick={() => {
@@ -250,7 +246,6 @@ const NAVBAR = () => {
             </li>
           </ul>
 
-          {/* DESKTOP LOGIN */}
           <button
             className="login-btn desktop-only"
             onClick={() => {
@@ -263,18 +258,16 @@ const NAVBAR = () => {
         </div>
       </nav>
 
-      {/* ================= LOGIN MODAL ================= */}
       {showLogin && (
         <div className="modal-overlay" onClick={() => setShowLogin(false)}>
           <div className="login-modal" onClick={(e) => e.stopPropagation()}>
-
             <a
               href="#"
               className="back-home"
               onClick={(e) => {
                 e.preventDefault();
                 setShowLogin(false);
-                handleScroll('home');
+                handleScroll("home");
               }}
             >
               ← Back to Home
@@ -303,7 +296,7 @@ const NAVBAR = () => {
 
               <div className="form-group">
                 <label>Password</label>
-                <div style={{ position: 'relative' }}>
+                <div style={{ position: "relative" }}>
                   <input
                     type={showLoginPassword ? "text" : "password"}
                     name="password"
@@ -311,23 +304,23 @@ const NAVBAR = () => {
                     className="form-input"
                     value={loginData.password}
                     onChange={handleLoginChange}
-                    style={{ paddingRight: '45px' }}
+                    style={{ paddingRight: "45px" }}
                   />
                   <button
                     type="button"
                     onClick={() => setShowLoginPassword((prev) => !prev)}
                     style={{
-                      position: 'absolute',
-                      right: '12px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      background: 'transparent',
-                      border: 'none',
-                      color: '#fff',
-                      cursor: 'pointer',
+                      position: "absolute",
+                      right: "12px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      background: "transparent",
+                      border: "none",
+                      color: "#fff",
+                      cursor: "pointer",
                     }}
                   >
-                    {showLoginPassword ? 'Hide' : 'Show'}
+                    {showLoginPassword ? "Hide" : "Show"}
                   </button>
                 </div>
               </div>
@@ -340,17 +333,17 @@ const NAVBAR = () => {
                 {loading ? "Logging in..." : "Continue"}
               </button>
 
-              <p style={{ textAlign: 'center', marginTop: '14px', color: '#fff' }}>
-                Don&apos;t have an account?{' '}
+              <p style={{ textAlign: "center", marginTop: "14px", color: "#fff" }}>
+                Don&apos;t have an account?{" "}
                 <button
                   type="button"
                   onClick={openSignup}
                   style={{
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#ff3df2',
-                    cursor: 'pointer',
-                    fontWeight: '700',
+                    background: "transparent",
+                    border: "none",
+                    color: "#ff3df2",
+                    cursor: "pointer",
+                    fontWeight: "700",
                   }}
                 >
                   Sign Up
@@ -361,16 +354,12 @@ const NAVBAR = () => {
         </div>
       )}
 
-      {/* ================= SIGNUP MODAL ================= */}
       {showSignup && (
         <div className="modal-overlay" onClick={() => setShowSignup(false)}>
           <div className="signup-modal" onClick={(e) => e.stopPropagation()}>
-
             <h2 className="signup-title">Create Account</h2>
 
             <form className="signup-form" onSubmit={handleSignupSubmit}>
-
-              {/* ROW 1 */}
               <div className="form-row">
                 <div className="form-group">
                   <label>First Name</label>
@@ -395,7 +384,6 @@ const NAVBAR = () => {
                 </div>
               </div>
 
-              {/* ROW 2 */}
               <div className="form-row">
                 <div className="form-group">
                   <label>Email</label>
@@ -420,7 +408,6 @@ const NAVBAR = () => {
                 </div>
               </div>
 
-              {/* ROW 3 */}
               <div className="form-row">
                 <div className="form-group">
                   <label>Password</label>
@@ -445,29 +432,25 @@ const NAVBAR = () => {
                 </div>
               </div>
 
-              {/* REFERRAL */}
               <div className="form-group full">
-                <label>Referral Code</label>
+                <label>Referral User Code (optional)</label>
                 <input
                   type="text"
                   name="referralCode"
-                  placeholder="Enter referral code"
+                  placeholder="Enter inviter's user code"
                   value={signupData.referralCode}
                   onChange={handleSignupChange}
                 />
               </div>
 
-              {/* BUTTON */}
               <button type="submit" className="signup-btn" disabled={loading}>
                 {loading ? "Signing up..." : "Sign Up"}
               </button>
 
-              {/* SWITCH */}
               <p className="switch-text">
                 Already have an account?{" "}
                 <span onClick={openLogin}>Login</span>
               </p>
-
             </form>
           </div>
         </div>
@@ -476,22 +459,36 @@ const NAVBAR = () => {
       {showUserCodeModal && (
         <div className="modal-overlay">
           <div className="signup-modal" style={{ textAlign: "center" }}>
-
-            <h2 style={{ marginBottom: "10px" }}>🎉 Account Created (Take Screenshot)</h2>
+            <h2 style={{ marginBottom: "10px" }}>🎉 Account Created</h2>
 
             <p style={{ marginBottom: "10px" }}>
-              Your <b>User Code</b> (Login ID):
+              Your <b>User Code</b> is also your <b>Referral Code</b>:
             </p>
 
-            <div style={{
-              background: "#111",
-              padding: "12px",
-              borderRadius: "8px",
-              fontSize: "18px",
-              fontWeight: "bold",
-              marginBottom: "15px"
-            }}>
-              {createdUserCode}
+            <div
+              style={{
+                background: "#111",
+                padding: "12px",
+                borderRadius: "8px",
+                fontSize: "18px",
+                fontWeight: "bold",
+                marginBottom: "15px",
+              }}
+            >
+              {createdUserCode || "Not generated"}
+            </div>
+
+            <div
+              style={{
+                background: "#111",
+                padding: "12px",
+                borderRadius: "8px",
+                fontSize: "13px",
+                marginBottom: "15px",
+                wordBreak: "break-all",
+              }}
+            >
+              {referralLink || "Referral link not available"}
             </div>
 
             <button
@@ -506,7 +503,7 @@ const NAVBAR = () => {
                 border: "none",
                 color: "#fff",
                 borderRadius: "6px",
-                cursor: "pointer"
+                cursor: "pointer",
               }}
             >
               Copy User Code
@@ -526,12 +523,11 @@ const NAVBAR = () => {
                 border: "none",
                 color: "#fff",
                 borderRadius: "6px",
-                cursor: "pointer"
+                cursor: "pointer",
               }}
             >
               Continue to Login
             </button>
-
           </div>
         </div>
       )}

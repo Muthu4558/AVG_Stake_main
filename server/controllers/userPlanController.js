@@ -13,14 +13,34 @@ const getCeilingMultiplier = (plan) => {
   return mult > 0 ? mult : 2;
 };
 
-const getCreditedPlanId = async (userId) => {
+const resolveUserId = async (value) => {
+  if (!value) return null;
+
+  // already numeric id
+  if (typeof value === "number" || /^\d+$/.test(String(value))) {
+    return Number(value);
+  }
+
+  // value is user_code like AVG13937
+  const result = await pool.query(
+    `SELECT id FROM users WHERE user_code = $1 LIMIT 1`,
+    [String(value).trim()]
+  );
+
+  return result.rows[0]?.id || null;
+};
+
+const getCreditedPlanId = async (receiverUserIdOrCode) => {
+  const receiverUserId = await resolveUserId(receiverUserIdOrCode);
+  if (!receiverUserId) return null;
+
   let result = await pool.query(
     `SELECT id
      FROM user_plans
      WHERE user_id = $1 AND status = 'active'
      ORDER BY id DESC
      LIMIT 1`,
-    [userId]
+    [receiverUserId]
   );
 
   if (!result.rows.length) {
@@ -30,7 +50,7 @@ const getCreditedPlanId = async (userId) => {
        WHERE user_id = $1
        ORDER BY id DESC
        LIMIT 1`,
-      [userId]
+      [receiverUserId]
     );
   }
 
@@ -49,7 +69,6 @@ const insertEarning = async ({
   const creditedUserPlanId = await getCreditedPlanId(receiverUserId);
   if (!creditedUserPlanId) return;
 
-  // ✅ GET PLAN DETAILS
   const planRes = await pool.query(
     `
     SELECT up.amount, p.ceiling_limit
@@ -68,7 +87,6 @@ const insertEarning = async ({
 
   const maxReturn = Number(plan.amount) * multiplier;
 
-  // ✅ GET TOTAL EARNED (ROI + DIRECT + LEVEL)
   const totalRes = await pool.query(
     `
     SELECT 
@@ -109,7 +127,6 @@ const insertEarning = async ({
     Number(row.direct) +
     Number(row.level);
 
-  // 🚫 STOP FULLY IF TARGET REACHED
   if (totalEarned >= maxReturn) {
     await pool.query(
       `UPDATE user_plans SET status='completed' WHERE id=$1`,
@@ -120,11 +137,9 @@ const insertEarning = async ({
 
   let finalAmount = Number(amount);
 
-  // 🔥 PREVENT OVERFLOW (PARTIAL CREDIT)
   if (totalEarned + finalAmount > maxReturn) {
     finalAmount = maxReturn - totalEarned;
 
-    // nothing left → stop
     if (finalAmount <= 0) {
       await pool.query(
         `UPDATE user_plans SET status='completed' WHERE id=$1`,
@@ -134,7 +149,6 @@ const insertEarning = async ({
     }
   }
 
-  // ✅ INSERT SAFE AMOUNT
   await pool.query(
     `
     INSERT INTO level_income
@@ -153,7 +167,6 @@ const insertEarning = async ({
     ]
   );
 
-  // 🔥 FINAL CHECK → MARK COMPLETED
   if (totalEarned + finalAmount >= maxReturn) {
     await pool.query(
       `UPDATE user_plans SET status='completed' WHERE id=$1`,
@@ -214,15 +227,15 @@ export const buyPlan = async (req, res) => {
 
     const insertedPlan = result.rows[0];
 
-    // 1) Direct income goes to the immediate referrer
-    const directRes = await pool.query(
+    // direct referrer is stored as user_code in referred_by
+    const userRes = await pool.query(
       "SELECT referred_by FROM users WHERE id = $1",
       [userId]
     );
 
-    const directParentId = directRes.rows[0]?.referred_by || null;
+    const directParentCode = userRes.rows[0]?.referred_by || null;
+    const directParentId = await resolveUserId(directParentCode);
 
-    // Use the plan's direct referral percent
     const directReferralPercent = parseNumber(
       plan.direct_referral ?? plan.direct_referral_percent ?? 0,
       0
@@ -243,7 +256,6 @@ export const buyPlan = async (req, res) => {
       });
     }
 
-    // 2) Level income: level 1 = direct referrer, level 2 = referrer's referrer, etc.
     const levelConfigsRes = await pool.query(
       `
       SELECT level, percentage
@@ -253,9 +265,12 @@ export const buyPlan = async (req, res) => {
       `
     );
 
-    let currentReceiverId = directParentId;
+    let currentReceiverCode = directParentCode;
 
     for (const lvl of levelConfigsRes.rows) {
+      if (!currentReceiverCode) break;
+
+      const currentReceiverId = await resolveUserId(currentReceiverCode);
       if (!currentReceiverId) break;
 
       const levelPercent = parseNumber(lvl.percentage, 0);
@@ -274,11 +289,11 @@ export const buyPlan = async (req, res) => {
       }
 
       const parentRes = await pool.query(
-        "SELECT referred_by FROM users WHERE id = $1",
-        [currentReceiverId]
+        "SELECT referred_by FROM users WHERE user_code = $1",
+        [String(currentReceiverCode)]
       );
 
-      currentReceiverId = parentRes.rows[0]?.referred_by || null;
+      currentReceiverCode = parentRes.rows[0]?.referred_by || null;
     }
 
     await pool.query("COMMIT");

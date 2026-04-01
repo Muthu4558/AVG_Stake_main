@@ -7,8 +7,7 @@ import {
   findUserByReferral
 } from "../models/userModel.js";
 import {
-  generateUserCode,
-  generateReferralCode
+  generateUserCode
 } from "../utils/generateUserCode.js";
 
 export const signup = async (req, res) => {
@@ -30,23 +29,22 @@ export const signup = async (req, res) => {
 
     let referred_by = null;
 
-if (referralCode) {
-  const refUser = await findUserByReferral(referralCode);
+    if (referralCode) {
+      const refUser = await findUserByReferral(referralCode.trim());
 
-  if (!refUser) {
-    return res.status(400).json({
-      message: "Invalid referral code",
-    });
-  }
+      if (!refUser) {
+        return res.status(400).json({
+          message: "Invalid referral code",
+        });
+      }
 
-  // ✅ FIX HERE
-  referred_by = refUser.id;
-}
+      // store referrer's user_code
+      referred_by = refUser.user_code;
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user_code = generateUserCode();
-    const referral_code = generateReferralCode();
 
     const user = await createUser({
       user_code,
@@ -56,14 +54,12 @@ if (referralCode) {
       lastname,
       email,
       phone,
-      referral_code,
       referred_by,
     });
 
     res.status(201).json({
       message: "User created successfully",
       user_code: user.user_code,
-      referral_code: user.referral_code,
     });
   } catch (error) {
     console.error("Signup error:", error);
@@ -82,7 +78,6 @@ export const adminSignup = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user_code = "ADMIN" + Math.floor(1000 + Math.random() * 9000);
-    const referral_code = "ADMINREF" + Math.floor(1000 + Math.random() * 9000);
 
     const admin = await createUser({
       user_code,
@@ -92,7 +87,7 @@ export const adminSignup = async (req, res) => {
       lastname,
       email,
       phone,
-      referral_code
+      referred_by: null,
     });
 
     res.status(201).json({
@@ -108,12 +103,12 @@ export const login = async (req, res) => {
   try {
     const { user_code, password } = req.body;
 
-const result = await pool.query(
-  "SELECT * FROM users WHERE user_code = $1",
-  [user_code]
-);
+    const result = await pool.query(
+      "SELECT * FROM users WHERE user_code = $1",
+      [user_code]
+    );
 
-const user = result.rows[0];
+    const user = result.rows[0];
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -148,7 +143,6 @@ const user = result.rows[0];
   }
 };
 
-// ADMIN CLICK-TO-LOGIN / IMPERSONATE USER
 export const loginAsUser = async (req, res) => {
   try {
     if (req.user?.role !== "admin") {
