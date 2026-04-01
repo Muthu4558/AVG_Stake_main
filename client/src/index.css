@@ -610,7 +610,7 @@ body {
   border-radius: 16px;
   padding: 30px;
   color: #fff;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
 }
 
 .signup-title {
@@ -8871,7 +8871,7 @@ input:checked+.slider:before {
   padding: 12px 20px;
   border-radius: 8px;
   font-weight: 500;
-  box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
   z-index: 9999;
   animation: slideIn 0.3s ease;
 }
@@ -8881,6 +8881,7 @@ input:checked+.slider:before {
     transform: translateX(100%);
     opacity: 0;
   }
+
   to {
     transform: translateX(0);
     opacity: 1;
@@ -10307,7 +10308,8 @@ td {
 .us-sidebar {
   width: 260px;
   height: 100vh;
-  position: fixed;   /* 🔥 FIXED */
+  position: fixed;
+  /* 🔥 FIXED */
   left: 0;
   top: 0;
 
@@ -10321,6 +10323,7 @@ td {
 
   scrollbar-width: none;
 }
+
 .us-sidebar::-webkit-scrollbar {
   display: none;
 }
@@ -10352,6 +10355,7 @@ td {
   transition: 0.3s;
   z-index: 999;
 }
+
 .us-overlay.show {
   opacity: 1;
   visibility: visible;
@@ -10375,6 +10379,7 @@ td {
 .us-logo h1 {
   font-size: 16px;
   color: white;
+  margin-top: 8px;
 }
 
 .us-close-btn {
@@ -10401,12 +10406,14 @@ td {
     z-index: 1100;
   }
 }
+
 .us-logo-box {
   width: 38px;
   height: 38px;
   background: linear-gradient(135deg, #4ade80, #3b82f6);
   border-radius: 10px;
 }
+
 .us-logo h1 {
   font-size: 18px;
   font-weight: 600;
@@ -10432,6 +10439,7 @@ td {
   transition: 0.25s;
   position: relative;
 }
+
 .us-item:hover {
   background: rgba(255, 255, 255, 0.05);
   color: white;
@@ -10442,6 +10450,7 @@ td {
   background: linear-gradient(90deg, #ec4899, #8b5cf6);
   color: white;
 }
+
 .us-active-bar {
   position: absolute;
   left: 0;
@@ -10464,6 +10473,7 @@ td {
 .us-arrow {
   transition: transform 0.3s;
 }
+
 .us-arrow.rotate {
   transform: rotate(90deg);
 }
@@ -10476,6 +10486,7 @@ td {
   transform: translateY(-6px);
   transition: all 0.3s ease;
 }
+
 .us-dropdown.open {
   max-height: 300px;
   opacity: 1;
@@ -10494,10 +10505,12 @@ td {
   text-decoration: none;
   transition: 0.2s;
 }
+
 .us-subitem:hover {
   background: rgba(255, 255, 255, 0.05);
   color: white;
 }
+
 .active-sub {
   background: rgba(236, 72, 153, 0.15);
   color: white;
@@ -10568,7 +10581,7 @@ td {
   justify-content: space-between;
   align-items: center;
   transition: 0.3s;
-  border: 1px solid rgba(255,255,255,0.05);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .card:hover {
@@ -10640,6 +10653,7 @@ td {
 }
 
 @media (max-width: 600px) {
+
   .grid-3,
   .grid-4 {
     grid-template-columns: 1fr;
@@ -10657,7 +10671,7 @@ td {
   top: 0;
   left: 260px;
   right: 0;
-  height: 60px;
+  height: 80px;
 
   display: flex;
   justify-content: space-between;
@@ -10666,7 +10680,7 @@ td {
   padding: 0 16px;
 
   background: linear-gradient(180deg, #0b1c4d, #081533);
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 
   z-index: 999;
 }
@@ -10687,6 +10701,7 @@ td {
   color: #fff;
   font-size: 18px;
   font-weight: 600;
+  margin-top: 8px;
 }
 
 /* RIGHT */
@@ -10732,6 +10747,12 @@ td {
   border-radius: 6px;
 }
 
+@media (min-width: 768px) {
+  .ut-brand {
+    display: none;
+  }
+}
+
 /* MOBILE */
 @media (max-width: 768px) {
   .utb-container {
@@ -10751,6 +10772,7 @@ td {
     font-size: 12px;
   }
 }
+
 /* ========= all pans ============= */
 .usrAllPlans__layoutWrapper {
   display: flex;
@@ -10792,7 +10814,7 @@ td {
   border-radius: 20px;
 
   background: #132a5e;
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 
   display: flex;
   flex-direction: column;
@@ -10803,7 +10825,7 @@ td {
 
 .usrAllPlans__planCard:hover {
   transform: translateY(-5px);
-  box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
 }
 
 /* BADGE */
@@ -10830,7 +10852,7 @@ td {
   justify-content: space-between;
   font-size: 14px;
   padding: 12px 0;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .usrAllPlans__planFeatureList span {
@@ -10859,7 +10881,7 @@ td {
 .usrAllPlans__modalOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(2px);
   display: flex;
   justify-content: center;
@@ -10872,7 +10894,7 @@ td {
   background: #0b1c3d;
   border-radius: 18px;
   padding: 20px;
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* HEADER */
@@ -10913,7 +10935,7 @@ td {
   margin-top: 5px;
   padding: 10px;
   border-radius: 8px;
-  border: 1px solid rgba(255,255,255,0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   background: transparent;
   color: #ffffff;
 }
@@ -10929,7 +10951,7 @@ td {
 .usrAllPlans__secondaryBtn {
   padding: 10px 16px;
   border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.3);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   background: transparent;
   color: #ffffff;
   cursor: pointer;
@@ -10991,7 +11013,7 @@ td {
   padding: 25px 20px;
   border-radius: 16px;
   background: #0f1f4b;
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 
   text-align: left;
 
@@ -11000,7 +11022,7 @@ td {
 
 .usrPortfolio__card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
 }
 
 /* ICON */
@@ -11093,7 +11115,7 @@ td {
 /* FOOTER */
 .usrPortfolio__footer {
   margin-top: 20px;
-  border-top: 1px solid rgba(255,255,255,0.1);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
   padding-top: 15px;
 }
 
@@ -11137,7 +11159,8 @@ td {
 /* MAIN CONTENT */
 .main {
   flex: 1;
-  min-width: 0; /* 🔥 VERY IMPORTANT (prevents overflow) */
+  min-width: 0;
+  /* 🔥 VERY IMPORTANT (prevents overflow) */
   display: flex;
   flex-direction: column;
 }
@@ -11172,7 +11195,7 @@ td {
   max-width: 100%;
   padding: 10px;
   border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   background: transparent;
   color: #fff;
   margin-bottom: 20px;
@@ -11181,16 +11204,18 @@ td {
 /* ===== TABLE FIX (MAIN PART) ===== */
 .usrDeposit__tableWrapper {
   width: 100%;
-  overflow-x: auto;  /* ONLY TABLE SCROLL */
+  overflow-x: auto;
+  /* ONLY TABLE SCROLL */
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
 }
 
 .usrDeposit__table {
   width: 100%;
-  min-width: 900px; /* forces scroll INSIDE wrapper */
+  min-width: 900px;
+  /* forces scroll INSIDE wrapper */
   border-collapse: collapse;
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* HEAD */
@@ -11199,7 +11224,7 @@ td {
   padding: 12px;
   font-size: 13px;
   color: #ccc;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   white-space: nowrap;
 }
 
@@ -11207,11 +11232,12 @@ td {
 .usrDeposit__table td {
   padding: 14px 12px;
   font-size: 14px;
-  white-space: nowrap; /* prevents breaking */
+  white-space: nowrap;
+  /* prevents breaking */
 }
 
 .usrDeposit__table tbody tr {
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 /* USER TEXT */
@@ -11263,7 +11289,7 @@ td {
   background-color: #0b1d45;
   color: #ffffff;
 
-  border: 1px solid rgba(255,255,255,0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   outline: none;
   cursor: pointer;
 }
@@ -11315,7 +11341,7 @@ td {
 }
 
 .usrDeposit__dropdown button:hover {
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 /* ===== MODAL ===== */
@@ -11336,7 +11362,7 @@ td {
   background: linear-gradient(145deg, #0b1c3d, #081733);
   border-radius: 16px;
   padding: 20px;
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .usrDeposit__modalHeader {
@@ -11421,7 +11447,7 @@ td {
   max-width: 100%;
   padding: 10px;
   border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   background: transparent;
   color: #fff;
   margin-bottom: 20px;
@@ -11436,7 +11462,7 @@ td {
   width: 100%;
   min-width: 900px;
   border-collapse: collapse;
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .uwTable th,
@@ -11448,12 +11474,12 @@ td {
 
 .uwTable th {
   color: #ccc;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   font-size: 13px !important;
 }
 
 .uwTable tr {
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .uwHash {
@@ -11498,8 +11524,8 @@ td {
   background: linear-gradient(145deg, #0b0f2a, #140035);
   border-radius: 16px;
   padding: 22px;
-  border: 1px solid rgba(255,255,255,0.08);
-  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
 
   display: flex;
   flex-direction: column;
@@ -11513,6 +11539,7 @@ td {
     opacity: 0;
     transform: translateY(20px) scale(0.97);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -11535,7 +11562,7 @@ td {
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.08);
   border: none;
   color: white;
   cursor: pointer;
@@ -11560,7 +11587,7 @@ td {
 }
 
 .uw2Stats div {
-  background: rgba(255,255,255,0.04);
+  background: rgba(255, 255, 255, 0.04);
   padding: 10px;
   border-radius: 10px;
   text-align: center;
@@ -11596,8 +11623,8 @@ td {
   width: 100%;
   padding: 11px;
   border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
   color: #fff;
   outline: none;
   font-size: 13px;
@@ -11621,7 +11648,7 @@ td {
 .uw2Field input:focus,
 .uw2Field select:focus {
   border-color: #5b5bff;
-  box-shadow: 0 0 0 1px rgba(91,91,255,0.3);
+  box-shadow: 0 0 0 1px rgba(91, 91, 255, 0.3);
 }
 
 /* ERROR */
@@ -11632,7 +11659,7 @@ td {
 
 /* ================= NOTES ================= */
 .uw2Notes {
-  background: rgba(255,255,255,0.04);
+  background: rgba(255, 255, 255, 0.04);
   padding: 12px;
   border-radius: 10px;
 }
@@ -11663,7 +11690,7 @@ td {
   padding: 8px 14px;
   border-radius: 8px;
   border: none;
-  background: rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.08);
   color: white;
   cursor: pointer;
 }
@@ -11733,7 +11760,7 @@ td {
   max-width: 100%;
   padding: 10px;
   border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   background: transparent;
   color: #fff;
   margin-bottom: 20px;
@@ -11749,7 +11776,7 @@ td {
   width: 100%;
   min-width: 850px;
   border-collapse: collapse;
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .utxTable th {
@@ -11757,7 +11784,7 @@ td {
   padding: 12px;
   font-size: 13px;
   color: #ccc;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   white-space: nowrap;
 }
 
@@ -11768,7 +11795,7 @@ td {
 }
 
 .utxTable tbody tr {
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 /* USER TEXT */
@@ -11854,7 +11881,7 @@ td {
   max-width: 100%;
   padding: 10px;
   border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   background: transparent;
   color: #fff;
   margin-bottom: 20px;
@@ -11870,7 +11897,7 @@ td {
   width: 100%;
   min-width: 850px;
   border-collapse: collapse;
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .uroiTable th {
@@ -11878,7 +11905,7 @@ td {
   padding: 12px;
   font-size: 13px;
   color: #ccc;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   white-space: nowrap;
 }
 
@@ -11889,7 +11916,7 @@ td {
 }
 
 .uroiTable tbody tr {
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 /* USER TEXT */
@@ -11980,7 +12007,7 @@ td {
   max-width: 100%;
   padding: 10px;
   border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   background: transparent;
   color: #fff;
   margin-bottom: 20px;
@@ -11996,7 +12023,7 @@ td {
   width: 100%;
   min-width: 850px;
   border-collapse: collapse;
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .udiTable th {
@@ -12004,7 +12031,7 @@ td {
   padding: 12px;
   font-size: 13px;
   color: #ccc;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   white-space: nowrap;
 }
 
@@ -12015,7 +12042,7 @@ td {
 }
 
 .udiTable tbody tr {
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 /* EMPTY STATE */
@@ -12110,7 +12137,7 @@ td {
 
 .refBtn.outline {
   background: transparent;
-  border: 1px solid rgba(255,255,255,0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 /* SEARCH */
@@ -12119,7 +12146,7 @@ td {
   max-width: 100%;
   padding: 10px;
   border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   background: transparent;
   color: #fff;
   margin-bottom: 20px;
@@ -12135,42 +12162,48 @@ td {
   width: 100%;
   min-width: 750px;
   border-collapse: collapse;
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
+
 .refTable th {
-text-align: left;
+  text-align: left;
 
   padding: 12px;
   font-size: 13px;
   color: #ccc;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   white-space: nowrap;
 }
+
 .refTable td {
-padding: 14px 12px;
+  padding: 14px 12px;
 
   font-size: 14px;
   white-space: nowrap;
 }
+
 .refTable tbody tr {
-background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
 
 }
+
 /* EMPTY */
 .refEmpty {
-  
+
   padding: 20px;
   color: #aaa;
 }
+
 /* LEVEL */
 .refLevel {
-  
+
   color: #60a5fa;
   font-weight: 500;
 }
+
 /* FOOTER */
 .refFooter {
-  
+
   margin-top: 20px;
   display: flex;
   justify-content: space-between;
@@ -12207,8 +12240,8 @@ background: rgba(255,255,255,0.05);
 .refSelect {
   padding: 8px 14px;
   border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.2);
-  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
   color: white;
   cursor: pointer;
 }
@@ -12217,7 +12250,7 @@ background: rgba(255,255,255,0.05);
 .refModalOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.7);
+  background: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(8px);
   display: flex;
   justify-content: center;
@@ -12231,7 +12264,7 @@ background: rgba(255,255,255,0.05);
   background: linear-gradient(145deg, #0b1c3d, #081733);
   border-radius: 16px;
   padding: 20px;
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* HEADER */
@@ -12257,7 +12290,7 @@ background: rgba(255,255,255,0.05);
   width: 100%;
   padding: 10px;
   border-radius: 8px;
-  border: 1px solid rgba(255,255,255,0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   background: transparent;
   color: white;
 }
@@ -12272,7 +12305,7 @@ background: rgba(255,255,255,0.05);
 
 .refCancel {
   padding: 8px 14px;
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.1);
   border: none;
   border-radius: 8px;
   color: white;
@@ -12309,8 +12342,8 @@ background: rgba(255,255,255,0.05);
 .refDropdownHeader {
   padding: 10px 14px;
   border-radius: 12px;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -12326,10 +12359,10 @@ background: rgba(255,255,255,0.05);
   width: 100%;
   background: #0b1c3d;
   border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   overflow: hidden;
   z-index: 50;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
 /* ITEM */
@@ -12341,7 +12374,7 @@ background: rgba(255,255,255,0.05);
 }
 
 .refDropdownItem:hover {
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.1);
   color: white;
 }
 
@@ -12504,8 +12537,8 @@ background: rgba(255,255,255,0.05);
   text-align: center;
   padding: 30px;
   border-radius: 20px;
-  background: linear-gradient(145deg,#0f2a66,#0a1a4f);
-  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  background: linear-gradient(145deg, #0f2a66, #0a1a4f);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
   margin-bottom: 20px;
 }
 
@@ -12514,7 +12547,7 @@ background: rgba(255,255,255,0.05);
   height: 70px;
   margin: auto;
   border-radius: 50%;
-  background: linear-gradient(135deg,#00e676,#00bcd4);
+  background: linear-gradient(135deg, #00e676, #00bcd4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -12523,11 +12556,11 @@ background: rgba(255,255,255,0.05);
 
 /* CARD */
 .u3Card {
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
   padding: 18px;
   border-radius: 16px;
   margin-bottom: 20px;
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* LIST */
@@ -12535,18 +12568,18 @@ background: rgba(255,255,255,0.05);
   display: flex;
   justify-content: space-between;
   padding: 10px 0;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 /* WALLET */
 .u3Wallets {
   display: grid;
-  grid-template-columns: repeat(4,1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 10px;
 }
 
 .u3Wallet {
-  background: rgba(255,255,255,0.06);
+  background: rgba(255, 255, 255, 0.06);
   padding: 12px;
   border-radius: 10px;
 }
@@ -12591,7 +12624,7 @@ background: rgba(255,255,255,0.05);
 
 .u3Badges span {
   margin-right: 10px;
-  background: rgba(0,255,150,0.1);
+  background: rgba(0, 255, 150, 0.1);
   padding: 4px 8px;
   border-radius: 6px;
 }
@@ -12616,7 +12649,7 @@ background: rgba(255,255,255,0.05);
 .u3ReferralBox {
   margin: 15px 0;
   padding: 10px;
-  background: rgba(255,255,255,0.06);
+  background: rgba(255, 255, 255, 0.06);
   border-radius: 8px;
   display: flex;
   justify-content: space-between;
@@ -12624,7 +12657,7 @@ background: rgba(255,255,255,0.05);
 
 /* BUTTONS */
 .primary {
-  background: linear-gradient(135deg,#ff00cc,#5b5bff);
+  background: linear-gradient(135deg, #ff00cc, #5b5bff);
   border: none;
   padding: 8px 14px;
   border-radius: 8px;
@@ -12632,7 +12665,7 @@ background: rgba(255,255,255,0.05);
 }
 
 .outline {
-  border: 1px solid rgba(255,255,255,0.3);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   background: transparent;
   color: white;
   padding: 8px 14px;
@@ -12668,27 +12701,27 @@ background: rgba(255,255,255,0.05);
 
 /* CARD INSIDE MODAL */
 .modalCard {
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
   padding: 16px;
   border-radius: 12px;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* INPUT */
 .modalCard input {
   padding: 10px;
   border-radius: 8px;
-  border: 1px solid rgba(255,255,255,0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   background: transparent;
   color: white;
 }
 
 /* BUTTONS */
 .secondary {
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.1);
   border: none;
   padding: 10px;
   border-radius: 8px;
@@ -12710,7 +12743,7 @@ background: rgba(255,255,255,0.05);
 .modalOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.7);
+  background: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(8px);
   display: flex;
   justify-content: center;
@@ -12721,7 +12754,7 @@ background: rgba(255,255,255,0.05);
 .modalBox {
   width: 400px;
   max-width: 95%;
-  background: linear-gradient(145deg,#0b1c3d,#081733);
+  background: linear-gradient(145deg, #0b1c3d, #081733);
   padding: 20px;
   border-radius: 14px;
 }
@@ -12743,7 +12776,7 @@ background: rgba(255,255,255,0.05);
 .modalBody input {
   padding: 10px;
   border-radius: 8px;
-  border: 1px solid rgba(255,255,255,0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   background: transparent;
   color: white;
 }
@@ -12772,27 +12805,27 @@ background: rgba(255,255,255,0.05);
 
 /* CARD INSIDE MODAL */
 .modalCard {
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
   padding: 16px;
   border-radius: 12px;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* INPUT */
 .modalCard input {
   padding: 10px;
   border-radius: 8px;
-  border: 1px solid rgba(255,255,255,0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   background: transparent;
   color: white;
 }
 
 /* BUTTONS */
 .secondary {
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.1);
   border: none;
   padding: 10px;
   border-radius: 8px;
@@ -12840,7 +12873,7 @@ background: rgba(255,255,255,0.05);
 .ustCreateBtn {
   padding: 8px 18px;
   border-radius: 20px;
-  background: linear-gradient(135deg,#ff00cc,#5b5bff);
+  background: linear-gradient(135deg, #ff00cc, #5b5bff);
   border: none;
   color: white;
   cursor: pointer;
@@ -12854,7 +12887,7 @@ background: rgba(255,255,255,0.05);
   margin: 20px 0;
   border-radius: 10px;
   background: transparent;
-  border: 1px solid rgba(255,255,255,0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   color: white;
 }
 
@@ -12867,7 +12900,7 @@ background: rgba(255,255,255,0.05);
   width: 100%;
   min-width: 900px;
   border-collapse: collapse;
-  border: 1px solid rgba(255,255,255,0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .ustTable th,
@@ -12879,11 +12912,11 @@ background: rgba(255,255,255,0.05);
 
 .ustTable th {
   color: #ccc;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .ustTable tr {
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .ustEmpty {
@@ -12907,7 +12940,7 @@ background: rgba(255,255,255,0.05);
 .ustModalOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.7);
+  background: rgba(0, 0, 0, 0.7);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -12918,7 +12951,7 @@ background: rgba(255,255,255,0.05);
 .ustModal {
   width: 450px;
   max-width: 95%;
-  background: linear-gradient(145deg,#0b1c3d,#081733);
+  background: linear-gradient(145deg, #0b1c3d, #081733);
   padding: 20px;
   border-radius: 14px;
 }
@@ -12935,7 +12968,7 @@ background: rgba(255,255,255,0.05);
   padding: 10px;
   border-radius: 8px;
   background: transparent;
-  border: 1px solid rgba(255,255,255,0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   color: white;
 }
 
@@ -12984,14 +13017,14 @@ background: rgba(255,255,255,0.05);
 .ustField textarea {
   padding: 10px;
   border-radius: 8px;
-  border: 1px solid rgba(255,255,255,0.2);
-  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
   color: white;
 }
 
 /* UPLOAD */
 .ustUploadBox {
-  border: 1px dashed rgba(255,255,255,0.3);
+  border: 1px dashed rgba(255, 255, 255, 0.3);
   padding: 15px;
   border-radius: 10px;
   text-align: center;
@@ -13020,7 +13053,7 @@ background: rgba(255,255,255,0.05);
 }
 
 .ustCancel {
-  background: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.1);
   border: none;
   padding: 8px 14px;
   border-radius: 8px;
@@ -13067,10 +13100,10 @@ background: rgba(255,255,255,0.05);
 
 /* CARD */
 .ubCard {
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
   padding: 20px;
   border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* FIELD */
@@ -13089,7 +13122,7 @@ background: rgba(255,255,255,0.05);
 .ubField input {
   padding: 12px;
   border-radius: 10px;
-  border: 1px solid rgba(255,255,255,0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   background: transparent;
   color: white;
 }
@@ -13113,7 +13146,7 @@ background: rgba(255,255,255,0.05);
 
 /* BUTTON */
 .primary {
-  background: linear-gradient(135deg,#ff00cc,#5b5bff);
+  background: linear-gradient(135deg, #ff00cc, #5b5bff);
   border: none;
   padding: 10px 20px;
   border-radius: 10px;
@@ -13137,7 +13170,7 @@ background: rgba(255,255,255,0.05);
   background: linear-gradient(135deg, #0f172a, #1e293b);
   padding: 24px;
   border-radius: 16px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
   margin-top: 20px;
   color: #fff;
 }
@@ -13172,14 +13205,14 @@ background: rgba(255,255,255,0.05);
 
 /* ITEM */
 .ubItem {
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
   padding: 14px;
   border-radius: 10px;
   transition: 0.2s;
 }
 
 .ubItem:hover {
-  background: rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 /* LABEL */
@@ -13213,7 +13246,7 @@ background: rgba(255,255,255,0.05);
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
@@ -13232,7 +13265,7 @@ background: rgba(255,255,255,0.05);
   background: linear-gradient(135deg, #0f172a, #1e293b);
   border-radius: 16px;
   padding: 20px;
-  box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
   animation: fadeIn 0.3s ease;
 }
 
@@ -13242,6 +13275,7 @@ background: rgba(255,255,255,0.05);
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -13277,7 +13311,7 @@ background: rgba(255,255,255,0.05);
 
 /* CARD */
 .modalCard {
-  background: rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.05);
   padding: 18px;
   border-radius: 12px;
 }
@@ -13293,7 +13327,7 @@ background: rgba(255,255,255,0.05);
 /* CANCEL BUTTON */
 .modalFooter button:first-child {
   background: transparent;
-  border: 1px solid rgba(255,255,255,0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   padding: 10px 16px;
   border-radius: 10px;
   color: #fff;
@@ -13362,7 +13396,7 @@ background: rgba(255,255,255,0.05);
   background: #0b1a3a;
   border-radius: 16px;
   padding: 20px;
-  box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
   animation: popupFade 0.25s ease;
 }
 
@@ -13401,14 +13435,14 @@ background: rgba(255,255,255,0.05);
   padding: 15px;
   border-radius: 12px;
   background: linear-gradient(135deg, #132a63, #0f1f4b);
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   align-items: center;
   transition: 0.3s;
 }
 
 .reward-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
 }
 
 /* ICON */
@@ -13452,6 +13486,7 @@ background: rgba(255,255,255,0.05);
     opacity: 0;
     transform: scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: scale(1);

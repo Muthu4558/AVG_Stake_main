@@ -61,16 +61,10 @@ const Topbar = ({ isOpen, setIsOpen }) => {
 
       {/* LEFT */}
       <div className="utb-left">
-        <button
-          className="utb-toggle"
-          onClick={() => setIsOpen((prev) => !prev)}
-        >
-          {isOpen ? <FaTimes /> : <FaBars />}
-        </button>
 
         <div className="ut-brand">
           <img src={Logo} width={40} alt="logo" />
-        <h2 className="utb-app-name">AVG</h2>
+          <h2 className="utb-app-name">AVG</h2>
         </div>
       </div>
 
@@ -87,15 +81,22 @@ const Topbar = ({ isOpen, setIsOpen }) => {
                 {user?.name || "User"}
               </p>
               <p className="utb-referral">
-                Code: {user?.user_code || "N/A"}
+                Referral Code: {user?.user_code || "N/A"}
               </p>
 
               <p className="utb-wallet">
-                ${wallet.toFixed(2)}
+                Wallet Balance: ${wallet.toFixed(2)}
               </p>
             </>
           )}
         </div>
+
+        <button
+          className="utb-toggle"
+          onClick={() => setIsOpen((prev) => !prev)}
+        >
+          {isOpen ? <FaTimes /> : <FaBars />}
+        </button>
 
         <button className="logout-btn" onClick={handleLogout}>
           Logout
