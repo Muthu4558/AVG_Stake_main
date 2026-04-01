@@ -6780,6 +6780,15 @@ input:checked+.slider:before {
   color: #ffffff;
 }
 
+.rr-filter-box select {
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  margin-left: 10px;
+  cursor: pointer;
+  background-color: #1b3c88;
+}
+
 /* Header Styles */
 .rr-header {
   display: flex;
@@ -6795,6 +6804,12 @@ input:checked+.slider:before {
   color: #a64bf4;
   margin: 0;
   font-weight: 600;
+}
+
+.rr-search-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .rr-search-box input {
@@ -9981,6 +9996,12 @@ td {
   }
 }
 
+@media (max-width: 768px) {
+  .logout-btn {
+    display: none;
+  }
+}
+
 /* Popup Styles */
 .popup {
   position: fixed;
@@ -10310,6 +10331,7 @@ td {
     position: fixed;
     left: 0;
     top: 0;
+    width: 100%;
     transform: translateX(-100%);
     z-index: 1000;
   }
@@ -10339,8 +10361,45 @@ td {
 .us-logo {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 35px;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding-left: 5px;
+}
+
+.us-logo img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+
+.us-logo h1 {
+  font-size: 16px;
+  color: white;
+}
+
+.us-close-btn {
+  display: none;
+}
+
+/* MOBILE ONLY */
+@media (max-width: 768px) {
+  .us-close-btn {
+    display: block;
+    position: absolute;
+    top: 15px;
+    right: 15px;
+
+    background: linear-gradient(135deg, #00d4ff, #0072ff);
+    border: none;
+    color: white;
+
+    font-size: 16px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+
+    z-index: 1100;
+  }
 }
 .us-logo-box {
   width: 38px;
@@ -10596,41 +10655,38 @@ td {
 .utb-container {
   position: fixed;
   top: 0;
-  left: 0;
+  left: 260px;
   right: 0;
-
-  height: 70px;
+  height: 60px;
 
   display: flex;
   justify-content: space-between;
   align-items: center;
 
-  padding: 12px 20px;
-  margin-left: 260px;
+  padding: 0 16px;
 
-  background: #020c1b; /* solid bg needed */
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-
-  z-index: 1000;
-  backdrop-filter: blur(10px);
   background: linear-gradient(180deg, #0b1c4d, #081533);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+
+  z-index: 999;
 }
 
 /* LEFT */
 .utb-left {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 10px;
 }
 
-.utb-title {
-  font-size: 22px;
+.ut-brand {
+  display: flex;
+  align-items: center;
+}
+
+.utb-app-name {
+  color: #fff;
+  font-size: 18px;
   font-weight: 600;
-  color: #ffffff;
-}
-
-.utb-subtitle {
-  font-size: 12px;
-  color: #a0aec0;
 }
 
 /* RIGHT */
@@ -10640,86 +10696,61 @@ td {
   gap: 12px;
 }
 
-/* USER INFO */
 .utb-user-info {
   text-align: right;
 }
 
-.utb-username {
-  font-weight: 600;
-  font-size: 14px;
-  color: #ffffff;
-}
-
 .utb-referral {
-  font-size: 12px;
-  color: #a0aec0;
+  font-size: 11px;
+  color: #aaa;
 }
 
 .utb-wallet {
-  font-size: 12px;
-  color: #ffffff;
-}
-
-.utb-wallet span {
+  font-size: 13px;
   font-weight: bold;
   color: #00d4ff;
+}
+
+/* LOGOUT */
+.logout-btn {
+  padding: 6px 12px;
+  background: #ff4d4f;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
 }
 
 /* TOGGLE */
 .utb-toggle {
   display: none;
-  font-size: 20px;
-  cursor: pointer;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #00d4ff, #0072ff);
-  transition: 0.3s;
+  font-size: 18px;
+  background: #0ea5e9;
+  border: none;
+  color: white;
+  padding: 6px 10px;
+  border-radius: 6px;
 }
 
-.utb-toggle:hover {
-  transform: scale(1.05);
-}
-
-/* 🔥 MOBILE FIX */
+/* MOBILE */
 @media (max-width: 768px) {
   .utb-container {
-    margin-left: 0;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-    padding: 2px;
+    left: 0;
   }
 
-  /* TOP ROW */
-  .utb-left {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  /* Hide subtitle for clean mobile */
-  .utb-subtitle {
-    display: none;
-  }
-
-  /* Move toggle to extreme right */
-  .utb-right {
-    width: 100%;
-    justify-content: space-between;
-  }
-
-  .utb-user-info {
-    text-align: left;
-  }
-
-  /* SHOW TOGGLE */
   .utb-toggle {
     display: block;
-    margin-left: auto;
+  }
+
+  .logout-btn {
+    padding: 5px 8px;
+    font-size: 12px;
+  }
+
+  .utb-wallet {
+    font-size: 12px;
   }
 }
-
 /* ========= all pans ============= */
 .usrAllPlans__layoutWrapper {
   display: flex;

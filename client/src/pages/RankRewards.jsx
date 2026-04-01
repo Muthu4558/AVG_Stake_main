@@ -5,6 +5,7 @@ const RankRewards = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState("all");
 
   // 🔥 REAL DATA
   const [rewardsData, setRewardsData] = useState([]);
@@ -132,17 +133,23 @@ const RankRewards = () => {
   };
 
   // Filter data
-  const filteredData = rewardsData.filter(item =>
+  const filteredData = rewardsData.filter(item => {
+  const matchesSearch =
     item.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
     item.reward.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.status.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+    item.status.toLowerCase().includes(searchTerm.toLowerCase());
+
+  const matchesStatus =
+    statusFilter === "all" || item.status === statusFilter;
+
+  return matchesSearch && matchesStatus;
+});
 
   // Pagination
   const indexOfLastItem = currentPage * rowsPerPage;
   const indexOfFirstItem = indexOfLastItem - rowsPerPage;
   const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / rowsPerPage));
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -245,6 +252,34 @@ const RankRewards = () => {
     return <div className="rr-popup">{popupMessage}</div>;
   };
 
+  const getPagination = () => {
+    const pages = [];
+    const maxVisible = 5;
+
+    let start = Math.max(currentPage - 2, 1);
+    let end = Math.min(start + maxVisible - 1, totalPages);
+
+    if (end - start < maxVisible - 1) {
+      start = Math.max(end - maxVisible + 1, 1);
+    }
+
+    if (start > 1) {
+      pages.push(1);
+      if (start > 2) pages.push("...");
+    }
+
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+
+    if (end < totalPages) {
+      if (end < totalPages - 1) pages.push("...");
+      pages.push(totalPages);
+    }
+
+    return pages;
+  };
+
   return (
     <div className="rr-container">
 
@@ -252,12 +287,29 @@ const RankRewards = () => {
         <h1 className="rr-title">Rank Rewards</h1>
 
         <div className="rr-search-box">
-          <input
+          <div>
+            <input
             type="text"
             placeholder="Search..."
             value={searchTerm}
             onChange={handleSearch}
           />
+          </div>
+
+          <div className="rr-filter-box">
+  <select
+    value={statusFilter}
+    onChange={(e) => {
+      setStatusFilter(e.target.value);
+      setCurrentPage(1);
+    }}
+  >
+    <option value="all">All</option>
+    <option value="approved">Completed</option>
+    <option value="pending">Pending</option>
+    <option value="rejected">Rejected</option>
+  </select>
+</div>
         </div>
       </div>
 
@@ -341,21 +393,35 @@ const RankRewards = () => {
         </div>
 
         <div className="rr-pagination">
-          <button onClick={handlePrevious} disabled={currentPage === 1}>Previous</button>
 
-          {[...Array(totalPages)].map((_, i) => (
-            <button
-              key={i}
-              className={currentPage === i + 1 ? 'rr-active' : ''}
-              onClick={() => handlePageChange(i + 1)}
-            >
-              {i + 1}
-            </button>
-          ))}
-
-          <button onClick={handleNext} disabled={currentPage === totalPages || totalPages === 0}>
-            Next
+          <button
+            onClick={handlePrevious}
+            disabled={currentPage === 1}
+          >
+            {"<"}
           </button>
+
+          {getPagination().map((p, i) =>
+            p === "..." ? (
+              <span key={i} className="dots">...</span>
+            ) : (
+              <button
+                key={i}
+                className={currentPage === p ? "rr-active" : ""}
+                onClick={() => handlePageChange(p)}
+              >
+                {p}
+              </button>
+            )
+          )}
+
+          <button
+            onClick={handleNext}
+            disabled={currentPage === totalPages}
+          >
+            {">"}
+          </button>
+
         </div>
       </div>
 

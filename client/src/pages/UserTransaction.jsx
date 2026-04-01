@@ -9,6 +9,8 @@ const UserTransaction = () => {
   const [data, setData] = useState([]);
 
   const [currentPage, setCurrentPage] = useState(1);
+
+  const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
   const token = localStorage.getItem("token");
@@ -76,28 +78,32 @@ const UserTransaction = () => {
   }, []);
 
   // ✅ FILTER
-  const filtered = useMemo(() => {
+  const filteredData = useMemo(() => {
     return data.filter((item) =>
-      item.type.toLowerCase().includes(search.toLowerCase()) ||
-      item.from.toLowerCase().includes(search.toLowerCase()) ||
-      item.to.toLowerCase().includes(search.toLowerCase())
+      Object.values(item)
+        .join("")
+        .toLowerCase()
+        .includes(search.toLowerCase())
     );
   }, [search, data]);
 
   // ✅ PAGINATION
-  const totalPages = Math.ceil(filtered.length / rowsPerPage);
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / rowsPerPage));
 
   const paginatedData = useMemo(() => {
-    const start = (currentPage - 1) * rowsPerPage;
-    return filtered.slice(start, start + rowsPerPage);
-  }, [filtered, currentPage, rowsPerPage]);
+    const start = (page - 1) * rowsPerPage;
+    return filteredData.slice(start, start + rowsPerPage);
+  }, [filteredData, page, rowsPerPage]);
 
-  // ✅ SMART PAGINATION
+  useEffect(() => {
+    if (page > totalPages) setPage(1);
+  }, [totalPages, page]);
+
   const getPagination = () => {
     const pages = [];
     const maxVisible = 5;
 
-    let start = Math.max(currentPage - 2, 1);
+    let start = Math.max(page - 2, 1);
     let end = Math.min(start + maxVisible - 1, totalPages);
 
     if (end - start < maxVisible - 1) {
@@ -212,22 +218,20 @@ const UserTransaction = () => {
             <div className="usrDeposit__pagination">
 
               <button
-                onClick={() =>
-                  setCurrentPage((prev) => Math.max(prev - 1, 1))
-                }
-                disabled={currentPage === 1}
+                disabled={page === 1}
+                onClick={() => setPage(p => Math.max(1, p - 1))}
               >
                 {"<"}
               </button>
 
               {getPagination().map((p, i) =>
                 p === "..." ? (
-                  <span key={i} className="dots">...</span>
+                  <span key={i}>...</span>
                 ) : (
                   <button
                     key={i}
-                    className={currentPage === p ? "active" : ""}
-                    onClick={() => setCurrentPage(p)}
+                    className={page === p ? "active" : ""}
+                    onClick={() => setPage(p)}
                   >
                     {p}
                   </button>
@@ -235,12 +239,10 @@ const UserTransaction = () => {
               )}
 
               <button
+                disabled={page === totalPages}
                 onClick={() =>
-                  setCurrentPage((prev) =>
-                    Math.min(prev + 1, totalPages)
-                  )
+                  setPage(p => Math.min(totalPages, p + 1))
                 }
-                disabled={currentPage === totalPages}
               >
                 {">"}
               </button>

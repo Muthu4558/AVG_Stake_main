@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { FaBars, FaTimes } from "react-icons/fa";
 import API from "../../utils/api";
 import { toast } from "react-hot-toast";
+import Logo from "../../assets/logo.png"
 
 const Topbar = ({ isOpen, setIsOpen }) => {
   const navigate = useNavigate();
@@ -59,7 +60,19 @@ const Topbar = ({ isOpen, setIsOpen }) => {
     <div className="utb-container">
 
       {/* LEFT */}
-      <div className="utb-left"></div>
+      <div className="utb-left">
+        <button
+          className="utb-toggle"
+          onClick={() => setIsOpen((prev) => !prev)}
+        >
+          {isOpen ? <FaTimes /> : <FaBars />}
+        </button>
+
+        <div className="ut-brand">
+          <img src={Logo} width={40} alt="logo" />
+        <h2 className="utb-app-name">AVG</h2>
+        </div>
+      </div>
 
       {/* RIGHT */}
       <div className="utb-right">
@@ -73,47 +86,19 @@ const Topbar = ({ isOpen, setIsOpen }) => {
               <p className="utb-username">
                 {user?.name || "User"}
               </p>
-
               <p className="utb-referral">
-                User Code: {user?.user_code || "N/A"}
+                Code: {user?.user_code || "N/A"}
               </p>
 
-              {/* <p className="utb-referral">
-                Referral: {user?.referral_code || "N/A"}
-              </p> */}
-
               <p className="utb-wallet">
-                Wallet Balance:{" "}
-                <span>${wallet.toFixed(2)}</span>
+                ${wallet.toFixed(2)}
               </p>
             </>
           )}
         </div>
 
-        <div>
-          {/* ✅ Logout Button */}
-          <button
-            onClick={handleLogout}
-            style={{
-              // marginLeft: "15px",
-              padding: "6px 12px",
-              background: "#ff4d4f",
-              color: "#fff",
-              border: "none",
-              borderRadius: "5px",
-              cursor: "pointer",
-            }}
-          >
-            Logout
-          </button>
-        </div>
-
-        {/* TOGGLE */}
-        <button
-          className="utb-toggle"
-          onClick={() => setIsOpen((prev) => !prev)}
-        >
-          {isOpen ? <FaTimes /> : <FaBars />}
+        <button className="logout-btn" onClick={handleLogout}>
+          Logout
         </button>
 
       </div>

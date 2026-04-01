@@ -1,4 +1,4 @@
-import React, { useState, useEffect  } from "react";
+import React, { useState, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 
 import {
@@ -10,7 +10,7 @@ import {
   FaUser,
   FaNetworkWired,
   FaMoneyBillWave,
-  FaTrophy 
+  FaTrophy
 } from "react-icons/fa";
 
 import Logo from "../../assets/logo.png"
@@ -24,16 +24,16 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
   };
 
   useEffect(() => {
-  if (isOpen) {
-    document.body.style.overflow = "hidden";
-  } else {
-    document.body.style.overflow = "auto";
-  }
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "auto";
+    }
 
-  return () => {
-    document.body.style.overflow = "auto";
-  };
-}, [isOpen]);
+    return () => {
+      document.body.style.overflow = "auto";
+    };
+  }, [isOpen]);
 
   const MenuItem = ({ icon, label, to, hasDropdown, menuKey }) => {
     const isActive = location.pathname === to;
@@ -42,12 +42,12 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
       <div
         className={`us-item ${isActive ? "us-active" : ""}`}
         onClick={() => {
-  if (hasDropdown) {
-    toggleMenu(menuKey);
-  } else if (window.innerWidth < 768) {
-    setIsOpen(false);
-  }
-}}
+          if (hasDropdown) {
+            toggleMenu(menuKey);
+          } else if (window.innerWidth < 768) {
+            setIsOpen(false);
+          }
+        }}
       >
         {isActive && <div className="us-active-bar" />}
 
@@ -58,9 +58,8 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
 
         {hasDropdown && (
           <FaChevronRight
-            className={`us-arrow ${
-              openMenu === menuKey ? "rotate" : ""
-            }`}
+            className={`us-arrow ${openMenu === menuKey ? "rotate" : ""
+              }`}
           />
         )}
       </div>
@@ -90,6 +89,10 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
       />
 
       <div className={`us-sidebar ${isOpen ? "open" : ""}`}>
+
+        <button className="us-close-btn" onClick={() => setIsOpen(false)}>
+          ✕
+        </button>
 
         {/* LOGO */}
         <div className="us-logo">
