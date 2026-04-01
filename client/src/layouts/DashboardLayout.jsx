@@ -6,7 +6,6 @@ import Topbar from "../components/Topbar";
 function DashboardLayout() {
   return (
     <div className="dashboard-layout">
-
       <Sidebar />
 
       <div className="main-area">
@@ -16,7 +15,6 @@ function DashboardLayout() {
           <Outlet />
         </div>
       </div>
-
     </div>
   );
 }
