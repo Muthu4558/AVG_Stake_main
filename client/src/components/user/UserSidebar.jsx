@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-
 import {
   FaTachometerAlt,
   FaLayerGroup,
   FaWallet,
-  FaChevronDown,
   FaChevronRight,
   FaUser,
   FaNetworkWired,
@@ -13,7 +11,7 @@ import {
   FaTrophy
 } from "react-icons/fa";
 
-import Logo from "../../assets/logo.png"
+import Logo from "../../assets/logo.png";
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
   const [openMenu, setOpenMenu] = useState(null);
@@ -23,20 +21,34 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     setOpenMenu(openMenu === menu ? null : menu);
   };
 
+  // 🔥 Prevent scroll
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "auto";
-    }
-
-    return () => {
-      document.body.style.overflow = "auto";
-    };
+    document.body.style.overflow = isOpen ? "hidden" : "auto";
+    return () => (document.body.style.overflow = "auto");
   }, [isOpen]);
 
+  // 🔥 AUTO OPEN ONLY (NO ACTIVE)
+  useEffect(() => {
+    if (["/user-deposit", "/user-withdraw", "/user-transaction"].some(p => location.pathname.startsWith(p))) {
+      setOpenMenu("transactions");
+    }
+
+    if (["/user-roi", "/user-direct", "/user-level"].some(p => location.pathname.startsWith(p))) {
+      setOpenMenu("earnings");
+    }
+
+    if (["/referrals", "/network"].some(p => location.pathname.startsWith(p))) {
+      setOpenMenu("network");
+    }
+
+    if (["/user-profile", "/user-support", "/user-bank"].some(p => location.pathname.startsWith(p))) {
+      setOpenMenu("account");
+    }
+  }, [location.pathname]);
+
+  // 🔥 MENU ITEM (ONLY ACTIVE IF DIRECT LINK)
   const MenuItem = ({ icon, label, to, hasDropdown, menuKey }) => {
-    const isActive = location.pathname === to;
+    const isActive = to && location.pathname === to;
 
     return (
       <div
@@ -58,14 +70,14 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
 
         {hasDropdown && (
           <FaChevronRight
-            className={`us-arrow ${openMenu === menuKey ? "rotate" : ""
-              }`}
+            className={`us-arrow ${openMenu === menuKey ? "rotate" : ""}`}
           />
         )}
       </div>
     );
   };
 
+  // 🔥 SUB ITEM (ONLY THIS SHOULD HIGHLIGHT)
   const SubItem = ({ label, to }) => {
     const isActive = location.pathname === to;
 
@@ -90,24 +102,20 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
 
       <div className={`us-sidebar ${isOpen ? "open" : ""}`}>
 
+        {/* CLOSE BTN */}
         <button className="us-close-btn" onClick={() => setIsOpen(false)}>
           ✕
         </button>
 
         {/* LOGO */}
         <div className="us-logo">
-          {/* <div className="us-logo-box"></div> */}
-          <img width={50} src={Logo} alt="" />
+          <img src={Logo} alt="logo" />
           <h1>AVG</h1>
         </div>
 
         {/* MAIN */}
         <p className="us-section">MAIN</p>
-        <MenuItem
-          icon={<FaTachometerAlt />}
-          label="Dashboard"
-          to="/user-dashboard"
-        />
+        <MenuItem icon={<FaTachometerAlt />} label="Dashboard" to="/user-dashboard" />
 
         {/* PLAN */}
         <p className="us-section">PLAN</p>
@@ -158,6 +166,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
           <SubItem label="My Network" to="/network" />
         </div>
 
+        {/* REWARD */}
         <p className="us-section">REWARD</p>
         <MenuItem icon={<FaTrophy />} label="Rewards" to="/user-rewards" />
 
@@ -176,7 +185,6 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
           <SubItem label="Support Ticket" to="/user-support" />
           <SubItem label="Bank" to="/user-bank" />
         </div>
-
       </div>
     </>
   );

@@ -1,6 +1,6 @@
-import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
+import ScrollToTop from "./pages/ScrollToTop";
 
 import PublicLayout from "./layouts/PublicLayout";
 import DashboardLayout from "./layouts/DashboardLayout";
@@ -54,7 +54,7 @@ import UserReward from "./pages/UserReward";
 function App() {
   return (
     <Router>
-
+      <ScrollToTop />
       <Routes>
 
         {/* PUBLIC WEBSITE */}

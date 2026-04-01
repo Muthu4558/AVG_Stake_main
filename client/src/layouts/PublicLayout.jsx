@@ -8,7 +8,7 @@ function PublicLayout() {
     <>
       <NAVBAR />
 
-      <main>
+      <main className="page-wrapper">
         <Outlet />
       </main>
 

@@ -12,7 +12,7 @@ function DashboardLayout() {
       <div className="main-area">
         <Topbar />
 
-        <div className="content">
+        <div className="content page-wrapper">
           <Outlet />
         </div>
       </div>
