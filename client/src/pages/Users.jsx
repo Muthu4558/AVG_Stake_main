@@ -12,7 +12,7 @@ const Users = () => {
     const [deleteUserId, setDeleteUserId] = useState(null);
     const [search, setSearch] = useState("");
     const [page, setPage] = useState(1);
-    const [rowsPerPage, setRowsPerPage] = useState(5);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
 
     const [menuOpen, setMenuOpen] = useState(null);
     const [viewUser, setViewUser] = useState(null);
@@ -34,7 +34,7 @@ const Users = () => {
         });
     }, [search, users]);
 
-    const totalPages = Math.ceil(filteredUsers.length / rowsPerPage);
+    const totalPages = Math.max(1, Math.ceil(filteredUsers.length / rowsPerPage));
 
     const paginatedUsers = useMemo(() => {
         const start = (page - 1) * rowsPerPage;
@@ -184,6 +184,36 @@ const Users = () => {
         }
     };
 
+    const getPagination = () => {
+        const pages = [];
+        const maxVisible = 5;
+
+        if (totalPages <= 1) return [1];
+
+        let start = Math.max(page - 2, 1);
+        let end = Math.min(start + maxVisible - 1, totalPages);
+
+        if (end - start < maxVisible - 1) {
+            start = Math.max(end - maxVisible + 1, 1);
+        }
+
+        if (start > 1) {
+            pages.push(1);
+            if (start > 2) pages.push("...");
+        }
+
+        for (let i = start; i <= end; i++) {
+            pages.push(i);
+        }
+
+        if (end < totalPages) {
+            if (end < totalPages - 1) pages.push("...");
+            pages.push(totalPages);
+        }
+
+        return pages;
+    };
+
     return (
         <div className="users-page">
             <div className="users-header">
@@ -297,34 +327,41 @@ const Users = () => {
                             setPage(1);
                         }}
                     >
-                        <option value={5}>5</option>
                         <option value={10}>10</option>
+                        <option value={25}>25</option>
+                        <option value={50}>50</option>
                     </select>
                 </div>
 
                 <div>
                     <button
                         disabled={page === 1}
-                        onClick={() => setPage(page - 1)}
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
                     >
-                        Previous
+                        {"<"}
                     </button>
 
-                    {[...Array(totalPages)].map((_, i) => (
-                        <button
-                            key={i}
-                            className={page === i + 1 ? "active" : ""}
-                            onClick={() => setPage(i + 1)}
-                        >
-                            {i + 1}
-                        </button>
-                    ))}
+                    {getPagination().map((p, i) =>
+                        p === "..." ? (
+                            <span key={i} className="dots">...</span>
+                        ) : (
+                            <button
+                                key={i}
+                                className={page === p ? "active" : ""}
+                                onClick={() => setPage(p)}
+                            >
+                                {p}
+                            </button>
+                        )
+                    )}
 
                     <button
                         disabled={page === totalPages}
-                        onClick={() => setPage(page + 1)}
+                        onClick={() =>
+                            setPage((p) => Math.min(totalPages, p + 1))
+                        }
                     >
-                        Next
+                        {">"}
                     </button>
                 </div>
             </div>
