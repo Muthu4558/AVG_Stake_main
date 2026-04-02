@@ -120,7 +120,7 @@ function App() {
           <Route path="/user-support" element={<UserSupportTicket />} />
           <Route path="/user-bank" element={<UserBank />} />
           <Route path="/user-rewards" element={<UserReward />} />
-          <Route path="/user-reward-claims" element={<UserRewardClaims />} />
+          <Route path="/user-monthly-claims" element={<UserRewardClaims />} />
         </Route>
 
       </Routes>

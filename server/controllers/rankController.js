@@ -40,7 +40,7 @@ export const updateRank = async (req, res) => {
     const { target_amount, reward } = req.body;
 
     await pool.query(
-      `UPDATE rank_config 
+      `UPDATE rank_config
        SET target_amount=$1, reward=$2
        WHERE id=$3`,
       [target_amount, reward, id]
@@ -57,10 +57,7 @@ export const deleteRank = async (req, res) => {
   try {
     const { id } = req.params;
 
-    await pool.query(
-      "DELETE FROM rank_config WHERE id=$1",
-      [id]
-    );
+    await pool.query("DELETE FROM rank_config WHERE id=$1", [id]);
 
     res.json({ message: "Deleted" });
   } catch (err) {
@@ -74,7 +71,7 @@ export const toggleRankStatus = async (req, res) => {
     const { id } = req.params;
 
     await pool.query(
-      `UPDATE rank_config 
+      `UPDATE rank_config
        SET status = NOT status
        WHERE id=$1`,
       [id]
@@ -90,14 +87,12 @@ export const getRanksUser = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // 🔥 GET USER CODE
     const userRes = await pool.query(
       "SELECT user_code FROM users WHERE id = $1",
       [userId]
     );
     const userCode = userRes.rows[0]?.user_code;
 
-    // 👉 get all ranks
     const rankRes = await pool.query(`
       SELECT id, target_amount, reward
       FROM rank_config
@@ -108,16 +103,18 @@ export const getRanksUser = async (req, res) => {
     const ranks = rankRes.rows;
     if (ranks.length === 0) return res.json([]);
 
-    // 👉 direct referrals (FIXED)
-    const directRes = await pool.query(`
+    const directRes = await pool.query(
+      `
       SELECT id, name, lastname, user_code
       FROM users
       WHERE referred_by = $1
-    `, [userCode]);
+    `,
+      [userCode]
+    );
 
-    // 🔥 FIXED RECURSIVE
     const getBranchBusiness = async (rootId) => {
-      const result = await pool.query(`
+      const result = await pool.query(
+        `
         WITH RECURSIVE branch AS (
           SELECT id, user_code FROM users WHERE id = $1
 
@@ -130,12 +127,13 @@ export const getRanksUser = async (req, res) => {
         SELECT COALESCE(SUM(amount),0) AS total
         FROM user_plans
         WHERE user_id IN (SELECT id FROM branch)
-      `, [rootId]);
+      `,
+        [rootId]
+      );
 
       return Number(result.rows[0].total || 0);
     };
 
-    // 👉 calculate branches
     const branches = [];
 
     for (const user of directRes.rows) {
@@ -143,7 +141,7 @@ export const getRanksUser = async (req, res) => {
 
       branches.push({
         name: `${user.name} ${user.lastname}`,
-        business
+        business,
       });
     }
 
@@ -152,7 +150,6 @@ export const getRanksUser = async (req, res) => {
     const results = [];
 
     for (const rank of ranks) {
-
       const milestones = [
         { percent: 40, amount: rank.target_amount * 0.4 },
         { percent: 30, amount: rank.target_amount * 0.3 },
@@ -170,7 +167,7 @@ export const getRanksUser = async (req, res) => {
             percent: m.percent,
             amount: m.amount,
             achieved: true,
-            by: branch.name
+            by: branch.name,
           };
         }
 
@@ -178,19 +175,19 @@ export const getRanksUser = async (req, res) => {
           percent: m.percent,
           amount: m.amount,
           achieved: false,
-          by: null
+          by: null,
         };
       });
 
       const progress = timeline
-        .filter(t => t.achieved)
+        .filter((t) => t.achieved)
         .reduce((sum, t) => sum + t.amount, 0);
 
       const unlocked = progress >= rank.target_amount;
 
       const rewardRow = await pool.query(
-        `SELECT status 
-         FROM user_rewards 
+        `SELECT status
+         FROM user_rewards
          WHERE user_id=$1 AND reward=$2 AND target_amount=$3
          LIMIT 1`,
         [userId, rank.reward, rank.target_amount]
@@ -204,14 +201,13 @@ export const getRanksUser = async (req, res) => {
         progress,
         unlocked,
         status,
-        timeline
+        timeline,
       });
 
       if (status !== "approved") break;
     }
 
     res.json(results);
-
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
@@ -237,7 +233,8 @@ export const getAllUsersRewards = async (req, res) => {
     `);
 
     const getBranchBusiness = async (rootId) => {
-      const result = await pool.query(`
+      const result = await pool.query(
+        `
         WITH RECURSIVE branch AS (
           SELECT id, user_code FROM users WHERE id = $1
 
@@ -250,7 +247,9 @@ export const getAllUsersRewards = async (req, res) => {
         SELECT COALESCE(SUM(amount),0) AS total
         FROM user_plans
         WHERE user_id IN (SELECT id FROM branch)
-      `, [rootId]);
+      `,
+        [rootId]
+      );
 
       return Number(result.rows[0].total || 0);
     };
@@ -258,13 +257,14 @@ export const getAllUsersRewards = async (req, res) => {
     const finalData = [];
 
     for (const user of usersRes.rows) {
-
-      // 🔥 FIXED direct users
-      const directRes = await pool.query(`
+      const directRes = await pool.query(
+        `
         SELECT id, name, lastname, user_code
         FROM users
         WHERE referred_by = $1
-      `, [user.user_code]);
+      `,
+        [user.user_code]
+      );
 
       const branches = [];
 
@@ -273,14 +273,13 @@ export const getAllUsersRewards = async (req, res) => {
 
         branches.push({
           name: `${d.name} ${d.lastname}`,
-          business
+          business,
         });
       }
 
       branches.sort((a, b) => b.business - a.business);
 
       for (const rank of ranks) {
-
         const milestones = [
           { percent: 40, amount: rank.target_amount * 0.4 },
           { percent: 30, amount: rank.target_amount * 0.3 },
@@ -298,7 +297,7 @@ export const getAllUsersRewards = async (req, res) => {
               percent: m.percent,
               amount: m.amount,
               achieved: true,
-              by: branch.name
+              by: branch.name,
             };
           }
 
@@ -306,19 +305,19 @@ export const getAllUsersRewards = async (req, res) => {
             percent: m.percent,
             amount: m.amount,
             achieved: false,
-            by: null
+            by: null,
           };
         });
 
         const progress = timeline
-          .filter(t => t.achieved)
+          .filter((t) => t.achieved)
           .reduce((sum, t) => sum + t.amount, 0);
 
         const unlocked = progress >= rank.target_amount;
 
         const rewardRow = await pool.query(
-          `SELECT status 
-           FROM user_rewards 
+          `SELECT status
+           FROM user_rewards
            WHERE user_id=$1 AND reward=$2 AND target_amount=$3
            LIMIT 1`,
           [user.id, rank.reward, rank.target_amount]
@@ -335,7 +334,7 @@ export const getAllUsersRewards = async (req, res) => {
           progress,
           unlocked,
           status,
-          timeline
+          timeline,
         });
 
         if (status !== "approved") break;
@@ -343,7 +342,6 @@ export const getAllUsersRewards = async (req, res) => {
     }
 
     res.json(finalData);
-
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
@@ -359,21 +357,21 @@ export const updateRewardStatus = async (req, res) => {
     }
 
     const existing = await pool.query(
-      `SELECT id FROM user_rewards 
+      `SELECT id FROM user_rewards
        WHERE user_id=$1 AND reward=$2 AND target_amount=$3`,
       [userId, reward, target_amount]
     );
 
     if (existing.rows.length > 0) {
       await pool.query(
-        `UPDATE user_rewards 
+        `UPDATE user_rewards
          SET status=$1, progress=$2
          WHERE user_id=$3 AND reward=$4 AND target_amount=$5`,
         [status, progress || 0, userId, reward, target_amount]
       );
     } else {
       await pool.query(
-        `INSERT INTO user_rewards 
+        `INSERT INTO user_rewards
         (user_id, reward, target_amount, status, progress)
         VALUES ($1,$2,$3,$4,$5)`,
         [userId, reward, target_amount, status, progress || 0]
@@ -381,7 +379,200 @@ export const updateRewardStatus = async (req, res) => {
     }
 
     res.json({ message: "Status updated" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+};
 
+const formatDate = (date) => {
+  const d = new Date(date);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0, 10);
+};
+
+const buildClaimMonths = (startDate, monthsCount, monthlyAmount) => {
+  const months = [];
+  const base = new Date(startDate);
+
+  for (let i = 0; i < monthsCount; i++) {
+    const monthDate = new Date(base);
+    monthDate.setMonth(base.getMonth() + i);
+
+    months.push({
+      month_no: i + 1,
+      month_label: monthDate.toLocaleString("en-IN", {
+        month: "long",
+        year: "numeric",
+      }),
+      due_date: formatDate(monthDate),
+      amount: Number(monthlyAmount || 0),
+      status: "pending",
+    });
+  }
+
+  return months;
+};
+
+export const getRewardClaimsAdmin = async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT
+        ur.user_id,
+        u.name,
+        u.lastname,
+        u.phone,
+        u.user_code,
+        ur.reward,
+        ur.target_amount,
+        ur.status AS reward_status,
+        ur.progress,
+        rc.id AS claim_id,
+        rc.monthly_amount,
+        rc.months_count,
+        rc.start_date,
+        rc.status AS claim_status,
+        rc.created_at,
+        rc.updated_at
+      FROM user_rewards ur
+      INNER JOIN users u ON u.id = ur.user_id
+      LEFT JOIN reward_claims rc
+        ON rc.user_id = ur.user_id
+       AND rc.reward = ur.reward
+       AND rc.target_amount = ur.target_amount
+      WHERE ur.status = 'approved'
+      ORDER BY ur.id DESC
+    `);
+
+    const rows = result.rows.map((row) => ({
+      ...row,
+      monthly_amount: row.monthly_amount !== null ? Number(row.monthly_amount) : null,
+      target_amount: Number(row.target_amount),
+      progress: Number(row.progress || 0),
+      months_count: Number(row.months_count || 12),
+      claim_months:
+        row.claim_id
+          ? buildClaimMonths(
+              row.start_date || row.created_at,
+              Number(row.months_count || 12),
+              row.monthly_amount
+            )
+          : [],
+    }));
+
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+export const saveRewardClaim = async (req, res) => {
+  try {
+    const {
+      userId,
+      reward,
+      target_amount,
+      monthly_amount,
+      months_count = 12,
+      start_date,
+    } = req.body;
+
+    if (!userId || !reward || !target_amount || !monthly_amount) {
+      return res.status(400).json({ message: "Missing fields" });
+    }
+
+    const claimStartDate = start_date || new Date().toISOString().slice(0, 10);
+
+    const result = await pool.query(
+      `
+      INSERT INTO reward_claims
+        (user_id, reward, target_amount, monthly_amount, months_count, start_date, status, updated_at)
+      VALUES
+        ($1,$2,$3,$4,$5,$6,'active',NOW())
+      ON CONFLICT (user_id, reward, target_amount)
+      DO UPDATE SET
+        monthly_amount = EXCLUDED.monthly_amount,
+        months_count = EXCLUDED.months_count,
+        start_date = EXCLUDED.start_date,
+        status = 'active',
+        updated_at = NOW()
+      RETURNING *
+      `,
+      [
+        userId,
+        reward,
+        target_amount,
+        monthly_amount,
+        months_count,
+        claimStartDate,
+      ]
+    );
+
+    res.json({
+      message: "Reward claim saved",
+      claim: {
+        ...result.rows[0],
+        monthly_amount: Number(result.rows[0].monthly_amount),
+        target_amount: Number(result.rows[0].target_amount),
+        months_count: Number(result.rows[0].months_count),
+        claim_months: buildClaimMonths(
+          result.rows[0].start_date,
+          Number(result.rows[0].months_count || 12),
+          result.rows[0].monthly_amount
+        ),
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+export const getUserRewardClaims = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const result = await pool.query(
+      `
+      SELECT
+        rc.id AS claim_id,
+        rc.user_id,
+        rc.reward,
+        rc.target_amount,
+        rc.monthly_amount,
+        rc.months_count,
+        rc.start_date,
+        rc.status AS claim_status,
+        rc.created_at,
+        rc.updated_at,
+        ur.status AS reward_status,
+        ur.progress
+      FROM reward_claims rc
+      LEFT JOIN user_rewards ur
+        ON ur.user_id = rc.user_id
+       AND ur.reward = rc.reward
+       AND ur.target_amount = rc.target_amount
+      WHERE rc.user_id = $1
+      ORDER BY rc.created_at DESC
+      `,
+      [userId]
+    );
+
+    const rows = result.rows.map((row) => ({
+      ...row,
+      monthly_amount: Number(row.monthly_amount || 0),
+      target_amount: Number(row.target_amount || 0),
+      months_count: Number(row.months_count || 12),
+      progress: Number(row.progress || 0),
+      claim_months: buildClaimMonths(
+        row.start_date || row.created_at,
+        Number(row.months_count || 12),
+        row.monthly_amount
+      ),
+    }));
+
+    res.json(rows);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });

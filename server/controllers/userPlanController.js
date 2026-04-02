@@ -1,4 +1,5 @@
 import { pool } from "../config/db.js";
+import { creditLevelIncome } from "./levelController.js";
 
 const parseNumber = (value, fallback = 0) => {
   if (value === null || value === undefined) return fallback;
@@ -160,33 +161,13 @@ export const buyPlan = async (req, res) => {
       });
     }
 
-    /* ===== LEVEL INCOME ===== */
-    let currentReceiverCode = directParentCode;
-
-    for (let i = 1; i <= 10; i++) {
-      if (!currentReceiverCode) break;
-
-      const currentReceiverId = await resolveUserId(currentReceiverCode);
-
-      await insertEarning({
-        receiverUserId: currentReceiverId,
-        receiverUserCode: currentReceiverCode,
-        fromUserId: userId,
-        fromUserCode: currentUserCode,
-        sourceUserPlanId: insertedPlan.id,
-        amount: numericAmount * 0.02,
-        percentage: 2,
-        level: i,
-        incomeType: "level",
-      });
-
-      const parentRes = await pool.query(
-        "SELECT referred_by FROM users WHERE user_code = $1",
-        [currentReceiverCode]
-      );
-
-      currentReceiverCode = parentRes.rows[0]?.referred_by;
-    }
+    // ✅ LEVEL INCOME (DYNAMIC FROM DB)
+await creditLevelIncome({
+  buyerId: userId,
+  planAmount: numericAmount,
+  userPlanId: insertedPlan.id,
+  creditedUserPlanId: insertedPlan.id,
+});
 
     await pool.query("COMMIT");
 

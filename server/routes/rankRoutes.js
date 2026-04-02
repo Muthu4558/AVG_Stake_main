@@ -8,7 +8,10 @@ import {
   toggleRankStatus,
   getRanksUser,
   getAllUsersRewards,
-  updateRewardStatus
+  updateRewardStatus,
+  getRewardClaimsAdmin,
+  saveRewardClaim,
+  getUserRewardClaims,
 } from "../controllers/rankController.js";
 
 const router = express.Router();
@@ -22,5 +25,10 @@ router.put("/:id/toggle", verifyToken, isAdmin, toggleRankStatus);
 
 router.get("/admin", verifyToken, isAdmin, getAllUsersRewards);
 router.post("/status", verifyToken, isAdmin, updateRewardStatus);
+
+// new reward claim pages
+router.get("/claims/admin", verifyToken, isAdmin, getRewardClaimsAdmin);
+router.post("/claims", verifyToken, isAdmin, saveRewardClaim);
+router.get("/claims/user", verifyToken, getUserRewardClaims);
 
 export default router;
