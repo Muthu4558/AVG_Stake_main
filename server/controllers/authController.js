@@ -1,17 +1,17 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
+import { v4 as uuidv4 } from "uuid";
 import { pool } from "../config/db.js";
-import {
-  createUser,
-  findUserByEmail,
-  findUserByReferral
-} from "../models/userModel.js";
+import { createUser } from "../models/userModel.js";
 import { createReferralChain } from "../models/referralModel.js";
 import { generateUserCode } from "../utils/generateUserCode.js";
+import { sendSignupOtpEmail } from "../utils/mailer.js";
 
+const OTP_MINUTES = Number(process.env.OTP_EXPIRE_MINUTES || 10);
+
+/* ================= SIGNUP (OTP SEND) ================= */
 export const signup = async (req, res) => {
-  const client = await pool.connect();
-
   try {
     const { name, lastname, email, phone, password, referralCode } = req.body;
 
@@ -19,24 +19,97 @@ export const signup = async (req, res) => {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    await client.query("BEGIN");
+    const normalizedEmail = email.trim().toLowerCase();
 
-    const existingEmail = await client.query(
-      "SELECT id FROM users WHERE email = $1",
-      [email]
+    // ❌ REMOVED strict email uniqueness check (now multiple users allowed)
+
+    const otp = crypto.randomInt(100000, 999999).toString();
+    const otpHash = await bcrypt.hash(otp, 10);
+
+    const signupId = uuidv4(); // 🔥 unique per signup
+
+    const payload = {
+      name,
+      lastname,
+      email: normalizedEmail,
+      phone,
+      password,
+      referralCode: referralCode?.trim() || null,
+    };
+
+    const expiresAt = new Date(Date.now() + OTP_MINUTES * 60 * 1000);
+
+    // ✅ insert without conflict (multiple rows allowed)
+    await pool.query(
+      `
+      INSERT INTO pending_signups (id, email, otp_hash, payload, expires_at)
+      VALUES ($1, $2, $3, $4::jsonb, $5)
+      `,
+      [signupId, normalizedEmail, otpHash, JSON.stringify(payload), expiresAt]
     );
 
-    if (existingEmail.rows.length > 0) {
-      await client.query("ROLLBACK");
-      return res.status(400).json({ message: "Email already exists" });
+    await sendSignupOtpEmail({
+      to: normalizedEmail,
+      otp,
+      name,
+    });
+
+    return res.status(200).json({
+      message: "OTP sent to your email",
+      signupId, // 🔥 IMPORTANT for frontend
+    });
+  } catch (error) {
+    console.error("Signup OTP error:", error);
+    return res.status(500).json({ message: "Failed to send OTP" });
+  }
+};
+
+/* ================= VERIFY OTP ================= */
+export const verifySignupOtp = async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    const { signupId, otp } = req.body;
+
+    if (!signupId || !otp) {
+      return res.status(400).json({ message: "Invalid request" });
     }
+
+    const pendingRes = await client.query(
+      "SELECT * FROM pending_signups WHERE id = $1",
+      [signupId]
+    );
+
+    const pending = pendingRes.rows[0];
+
+    if (!pending) {
+      return res.status(400).json({ message: "Signup not found" });
+    }
+
+    if (new Date(pending.expires_at).getTime() < Date.now()) {
+      await client.query("DELETE FROM pending_signups WHERE id = $1", [
+        signupId,
+      ]);
+      return res.status(400).json({ message: "OTP expired" });
+    }
+
+    const isMatch = await bcrypt.compare(String(otp), pending.otp_hash);
+
+    if (!isMatch) {
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+
+    const { name, lastname, email, phone, password, referralCode } =
+      pending.payload;
+
+    await client.query("BEGIN");
 
     let sponsor = null;
 
     if (referralCode) {
       const refUser = await client.query(
         "SELECT id, user_code FROM users WHERE user_code = $1",
-        [referralCode.trim()]
+        [referralCode]
       );
 
       if (!refUser.rows[0]) {
@@ -50,6 +123,7 @@ export const signup = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const user_code = generateUserCode();
 
+    // ✅ NO email uniqueness restriction
     const user = await createUser(
       {
         user_code,
@@ -68,21 +142,27 @@ export const signup = async (req, res) => {
       await createReferralChain(client, user.user_code, sponsor.user_code);
     }
 
+    // delete only this signup request
+    await client.query("DELETE FROM pending_signups WHERE id = $1", [
+      signupId,
+    ]);
+
     await client.query("COMMIT");
 
-    res.status(201).json({
-      message: "User created successfully",
+    return res.status(201).json({
+      message: "Account verified and created successfully",
       user_code: user.user_code,
     });
   } catch (error) {
     await client.query("ROLLBACK");
-    console.error("Signup error:", error);
-    res.status(500).json({ error: error.message });
+    console.error("Verify OTP error:", error);
+    return res.status(500).json({ message: "OTP verification failed" });
   } finally {
     client.release();
   }
 };
 
+/* ================= ADMIN SIGNUP (UNCHANGED) ================= */
 export const adminSignup = async (req, res) => {
   try {
     const { name, lastname, email, phone, password, adminSecret } = req.body;
@@ -108,13 +188,14 @@ export const adminSignup = async (req, res) => {
 
     res.status(201).json({
       message: "Admin created",
-      user_code: admin.user_code
+      user_code: admin.user_code,
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
+/* ================= LOGIN (UNCHANGED) ================= */
 export const login = async (req, res) => {
   try {
     const { user_code, password } = req.body;
@@ -138,7 +219,7 @@ export const login = async (req, res) => {
 
     if (!user.status) {
       return res.status(403).json({
-        message: "Your account is deactivated. Contact admin."
+        message: "Your account is deactivated. Contact admin.",
       });
     }
 
@@ -159,6 +240,7 @@ export const login = async (req, res) => {
   }
 };
 
+/* ================= ADMIN LOGIN AS USER (UNCHANGED) ================= */
 export const loginAsUser = async (req, res) => {
   try {
     if (req.user?.role !== "admin") {
@@ -195,7 +277,10 @@ export const loginAsUser = async (req, res) => {
       token,
       role: targetUser.role,
       user_code: targetUser.user_code,
-      redirectTo: targetUser.role === "admin" ? "/admin/dashboard" : "/user-dashboard",
+      redirectTo:
+        targetUser.role === "admin"
+          ? "/admin/dashboard"
+          : "/user-dashboard",
     });
   } catch (error) {
     console.error("loginAsUser error:", error);

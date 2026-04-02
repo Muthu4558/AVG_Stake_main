@@ -1,10 +1,11 @@
 import express from "express";
-import { signup, login, adminSignup, loginAsUser } from "../controllers/authController.js";
+import { signup, verifySignupOtp, login, adminSignup, loginAsUser } from "../controllers/authController.js";
 import { verifyToken, isAdmin } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
 router.post("/signup", signup);
+router.post("/verify-signup-otp", verifySignupOtp);
 router.post("/admin/signup", adminSignup);
 router.post("/login", login);
 

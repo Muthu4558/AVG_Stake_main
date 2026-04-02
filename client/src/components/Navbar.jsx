@@ -26,9 +26,17 @@ const NAVBAR = () => {
     referralCode: "",
   });
 
+  const [otpData, setOtpData] = useState({
+    email: "",
+    otp: "",
+  });
+
+  const [signupId, setSignupId] = useState("");
+
   const [loading, setLoading] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
+  const [showOtpModal, setShowOtpModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showLoginPassword, setShowLoginPassword] = useState(false);
 
@@ -162,10 +170,47 @@ const NAVBAR = () => {
         referralCode: referralCode.trim() || undefined,
       });
 
+      setSignupId(res.data.signupId); // 🔥 IMPORTANT
+
+      toast.success(res.data.message || "OTP sent to email");
+
+      setOtpData({
+        email: email.trim(),
+        otp: "",
+      });
+
+      setShowSignup(false);
+      setShowOtpModal(true);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Signup failed ❌");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+
+    if (!otpData.email || !otpData.otp) {
+      return toast.error("OTP is required ⚠️");
+    }
+
+    try {
+      setLoading(true);
+
+      const res = await axios.post(
+  "http://localhost:5000/api/auth/verify-signup-otp",
+  {
+    signupId,   // 🔥 THIS IS THE FIX
+    otp: otpData.otp,
+  }
+);
+
       setCreatedUserCode(res.data.user_code || "");
+      setShowOtpModal(false);
       setShowUserCodeModal(true);
 
-      toast.success("Signup successful 🎉 Please log in");
+      toast.success("Email verified and account created 🎉");
 
       setSignupData({
         name: "",
@@ -176,8 +221,46 @@ const NAVBAR = () => {
         confirmPassword: "",
         referralCode: signupData.referralCode || "",
       });
+
+      setOtpData({
+        email: "",
+        otp: "",
+      });
     } catch (err) {
-      toast.error(err.response?.data?.message || "Signup failed ❌");
+      toast.error(err.response?.data?.message || "OTP verification failed ❌");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    try {
+      setLoading(true);
+
+      const { name, lastname, email, phone, password, referralCode } =
+        signupData;
+
+      if (!name || !lastname || !email || !phone || !password) {
+        return toast.error("Signup data missing, please fill the form again ⚠️");
+      }
+
+      await axios.post("http://localhost:5000/api/auth/signup", {
+        name,
+        lastname,
+        email,
+        phone,
+        password,
+        referralCode: referralCode.trim() || undefined,
+      });
+
+      setOtpData({
+        email: email.trim(),
+        otp: "",
+      });
+
+      toast.success("OTP resent to your email ✅");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Resend OTP failed ❌");
     } finally {
       setLoading(false);
     }
@@ -185,11 +268,13 @@ const NAVBAR = () => {
 
   const openLogin = () => {
     setShowSignup(false);
+    setShowOtpModal(false);
     setShowLogin(true);
   };
 
   const openSignup = () => {
     setShowLogin(false);
+    setShowOtpModal(false);
     setShowSignup(true);
   };
 
@@ -224,21 +309,24 @@ const NAVBAR = () => {
           </div>
 
           <ul className={`nav-links ${mobileMenuOpen ? "mobile-open" : ""}`}>
-            {["home", "about", "plan", "roadmap", "features", "faq"].map((item) => (
-              <li
-                key={item}
-                className={`nav-item ${isActive(item) ? "active" : ""}`}
-                onClick={() => handleScroll(item)}
-              >
-                {item.charAt(0).toUpperCase() + item.slice(1)}
-              </li>
-            ))}
+            {["home", "about", "plan", "roadmap", "features", "faq"].map(
+              (item) => (
+                <li
+                  key={item}
+                  className={`nav-item ${isActive(item) ? "active" : ""}`}
+                  onClick={() => handleScroll(item)}
+                >
+                  {item.charAt(0).toUpperCase() + item.slice(1)}
+                </li>
+              )
+            )}
 
             <li
               className="nav-item mobile-login-btn"
               onClick={() => {
                 setShowLogin(true);
                 setShowSignup(false);
+                setShowOtpModal(false);
                 setMobileMenuOpen(false);
               }}
             >
@@ -251,6 +339,7 @@ const NAVBAR = () => {
             onClick={() => {
               setShowLogin(true);
               setShowSignup(false);
+              setShowOtpModal(false);
             }}
           >
             Log In
@@ -456,6 +545,50 @@ const NAVBAR = () => {
         </div>
       )}
 
+      {showOtpModal && (
+        <div className="modal-overlay" onClick={() => setShowOtpModal(false)}>
+          <div className="signup-modal" onClick={(e) => e.stopPropagation()}>
+            <h2 className="signup-title">Verify OTP</h2>
+
+            <p style={{ marginBottom: "16px", textAlign: "center" }}>
+              We sent an OTP to <b>{otpData.email}</b>
+            </p>
+
+            <form className="signup-form" onSubmit={handleVerifyOtp}>
+              <div className="form-group full">
+                <label>OTP</label>
+                <input
+                  type="text"
+                  name="otp"
+                  placeholder="Enter 6-digit OTP"
+                  value={otpData.otp}
+                  onChange={(e) =>
+                    setOtpData((prev) => ({
+                      ...prev,
+                      otp: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+
+              <button type="submit" className="signup-btn" disabled={loading}>
+                {loading ? "Verifying..." : "Verify OTP"}
+              </button>
+
+              <p className="switch-text">
+                Didn&apos;t get OTP?{" "}
+                <span onClick={handleResendOtp}>Resend OTP</span>
+              </p>
+
+              <p className="switch-text">
+                Back to{" "}
+                <span onClick={() => setShowOtpModal(false)}>Signup</span>
+              </p>
+            </form>
+          </div>
+        </div>
+      )}
+
       {showUserCodeModal && (
         <div className="modal-overlay">
           <div className="signup-modal" style={{ textAlign: "center" }}>
@@ -515,6 +648,7 @@ const NAVBAR = () => {
               onClick={() => {
                 setShowUserCodeModal(false);
                 setShowSignup(false);
+                setShowOtpModal(false);
                 setShowLogin(true);
               }}
               style={{

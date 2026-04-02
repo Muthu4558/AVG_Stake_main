@@ -5136,8 +5136,8 @@ body {
 .hamburger {
   display: none;
   position: fixed;
-  top: 16px;
-  left: 16px;
+  top: 8px;
+  right: 16px;
   z-index: 1200;
   width: 46px;
   height: 46px;
@@ -5186,6 +5186,8 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 6px;
+    padding: 10px;
   }
 
   .sidebar {
