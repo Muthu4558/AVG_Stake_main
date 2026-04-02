@@ -5267,13 +5267,8 @@ body {
     padding: 8px;
   }
 }
-/* =================== */
-/* USERMANAGEMENT PAGE */
-/* ================== */
-/* User Management Specific Styles - with um- prefix to avoid conflicts */
 
-/* PAGE */
-
+/* ========== admin user management ============ */
 .users-page {
   padding: 25px;
   color: white;
