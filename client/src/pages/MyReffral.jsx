@@ -157,7 +157,12 @@ const MyReferral = () => {
                   filteredData.map((item, index) => (
                     <tr key={item.id}>
                       <td>{index + 1}</td>
-                      <td>{item.username}</td>
+                      <td>
+                        <div style={{ display: "flex", flexDirection: "column" }}>
+                          <span>{item.username}</span>
+                          <small style={{ color: "#aaa" }}>{item.user_code}</small>
+                        </div>
+                      </td>
                       <td>{item.lastname}</td>
                       <td>{item.phone}</td>
                       <td>Level 1</td> {/* Static for now */}

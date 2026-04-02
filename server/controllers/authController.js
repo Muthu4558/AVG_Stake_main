@@ -6,64 +6,80 @@ import {
   findUserByEmail,
   findUserByReferral
 } from "../models/userModel.js";
-import {
-  generateUserCode
-} from "../utils/generateUserCode.js";
+import { createReferralChain } from "../models/referralModel.js";
+import { generateUserCode } from "../utils/generateUserCode.js";
 
 export const signup = async (req, res) => {
+  const client = await pool.connect();
+
   try {
-    const {
-      name,
-      lastname,
-      email,
-      phone,
-      password,
-      referralCode
-    } = req.body;
+    const { name, lastname, email, phone, password, referralCode } = req.body;
 
     if (!name || !lastname || !email || !phone || !password) {
-      return res.status(400).json({
-        message: "All fields are required",
-      });
+      return res.status(400).json({ message: "All fields are required" });
     }
 
-    let referred_by = null;
+    await client.query("BEGIN");
+
+    const existingEmail = await client.query(
+      "SELECT id FROM users WHERE email = $1",
+      [email]
+    );
+
+    if (existingEmail.rows.length > 0) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ message: "Email already exists" });
+    }
+
+    let sponsor = null;
 
     if (referralCode) {
-      const refUser = await findUserByReferral(referralCode.trim());
+      const refUser = await client.query(
+        "SELECT id, user_code FROM users WHERE user_code = $1",
+        [referralCode.trim()]
+      );
 
-      if (!refUser) {
-        return res.status(400).json({
-          message: "Invalid referral code",
-        });
+      if (!refUser.rows[0]) {
+        await client.query("ROLLBACK");
+        return res.status(400).json({ message: "Invalid referral code" });
       }
 
-      // store referrer's user_code
-      referred_by = refUser.user_code;
+      sponsor = refUser.rows[0];
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-
     const user_code = generateUserCode();
 
-    const user = await createUser({
-      user_code,
-      password: hashedPassword,
-      role: "user",
-      name,
-      lastname,
-      email,
-      phone,
-      referred_by,
-    });
+    const user = await createUser(
+      {
+        user_code,
+        password: hashedPassword,
+        role: "user",
+        name,
+        lastname,
+        email,
+        phone,
+        referred_by: sponsor ? sponsor.user_code : null,
+      },
+      client
+    );
+
+    if (sponsor) {
+      await createReferralChain(client, user.user_code, sponsor.user_code);
+    }
+
+    await client.query("COMMIT");
 
     res.status(201).json({
       message: "User created successfully",
       user_code: user.user_code,
     });
   } catch (error) {
+    await client.query("ROLLBACK");
     console.error("Signup error:", error);
     res.status(500).json({ error: error.message });
+  } finally {
+    client.release();
   }
 };
 

@@ -84,6 +84,7 @@ const Users = () => {
                 const formatted = res.data.map((u) => ({
                     id: u.id,
                     username: u.name,
+                    userCode: u.user_code,
                     email: u.email,
                     active: true,
                     phone: u.phone || "-",
@@ -247,7 +248,12 @@ const Users = () => {
                         {paginatedUsers.map((user, index) => (
                             <tr key={user.id}>
                                 <td>{(page - 1) * rowsPerPage + index + 1}</td>
-                                <td>{user.username}</td>
+                                <td>
+                                    <div style={{ display: "flex", flexDirection: "column" }}>
+                                        <span>{user.username}</span>
+                                        <small style={{ color: "#aaa" }}>{user.userCode}</small>
+                                    </div>
+                                </td>
                                 <td>{user.email}</td>
                                 <td>
                                     <span className={user.status ? "badge-active" : "badge-inactive"}>

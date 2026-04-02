@@ -18,7 +18,7 @@ const MyNetwork = () => {
     return {
       name: node.name || "User",
       attributes: {
-        id: node.id,
+        userCode: node.user_code,
         wallet: `₹${node.wallet || 0}`,
       },
       children: node.children?.map(formatTree) || [],
@@ -78,7 +78,7 @@ const MyNetwork = () => {
                         <div className="nodeText">
                           <div className="name">{nodeDatum.name}</div>
                           <div className="id">
-                            ID: {nodeDatum.attributes?.id}
+                            {nodeDatum.attributes?.userCode}
                           </div>
                         </div>
                       </div>

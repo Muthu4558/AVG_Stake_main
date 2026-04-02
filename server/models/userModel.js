@@ -1,18 +1,21 @@
 import { pool } from "../config/db.js";
 
-export const createUser = async ({
-  user_code,
-  password,
-  role = "user",
-  name,
-  lastname,
-  email,
-  phone,
-  referred_by = null, // stores referrer's user_code
-}) => {
+export const createUser = async (
+  {
+    user_code,
+    password,
+    role = "user",
+    name,
+    lastname,
+    email,
+    phone,
+    referred_by = null,
+  },
+  client = pool
+) => {
   const query = `
-    INSERT INTO users 
-    (user_code, password, role, name, lastname, email, phone, referred_by)
+    INSERT INTO users
+      (user_code, password, role, name, lastname, email, phone, referred_by)
     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
     RETURNING *;
   `;
@@ -28,7 +31,7 @@ export const createUser = async ({
     referred_by,
   ];
 
-  const result = await pool.query(query, values);
+  const result = await client.query(query, values);
   return result.rows[0];
 };
 
@@ -40,7 +43,6 @@ export const findUserByEmail = async (email) => {
   return result.rows[0];
 };
 
-// now checks user_code, not referral_code
 export const findUserByReferral = async (user_code) => {
   const result = await pool.query(
     "SELECT * FROM users WHERE user_code = $1",

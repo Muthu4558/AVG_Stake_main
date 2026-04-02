@@ -38,6 +38,9 @@ const Referral = () => {
           referred:
             `${r.referred_name || ""} ${r.referred_lastname || ""}`.trim() || "N/A",
 
+          referrerCode: r.referrer_code || "-",
+          referredCode: r.referred_code || "-",
+
           referrerPhone: r.referrer_phone || "-",
           referredPhone: r.referred_phone || "-",
 
@@ -125,8 +128,19 @@ const Referral = () => {
             {paginated.map((r, index) => (
               <tr key={r.id}>
                 <td>{(page - 1) * rowsPerPage + index + 1}</td>
-                <td>{r.referrer}</td>
-                <td>{r.referred}</td>
+                <td>
+                  <div style={{ display: "flex", flexDirection: "column" }}>
+                    <span>{r.referrer}</span>
+                    <small style={{ color: "#aaa" }}>{r.referrerCode}</small>
+                  </div>
+                </td>
+
+                <td>
+                  <div style={{ display: "flex", flexDirection: "column" }}>
+                    <span>{r.referred}</span>
+                    <small style={{ color: "#aaa" }}>{r.referredCode}</small>
+                  </div>
+                </td>
                 <td>{r.referrerPhone}</td>
                 <td>{r.referredPhone}</td>
                 <td><span className="level-badge">{r.level}</span></td>

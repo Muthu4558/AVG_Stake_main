@@ -186,24 +186,25 @@ export const changePassword = async (req, res) => {
 export const getAllReferrals = async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT 
-        u1.id,
-        u1.name AS referred_name,
-        u1.lastname AS referred_lastname,
-        u1.phone AS referred_phone,
-        u1.created_at,
+      SELECT
+        rt.id,
+        rt.level,
+        rt.created_at,
 
-        u2.name AS referrer_name,
-        u2.lastname AS referrer_lastname,
-        u2.phone AS referrer_phone,
-        u2.user_code AS referrer_code
+        ref.name AS referrer_name,
+        ref.lastname AS referrer_lastname,
+        ref.phone AS referrer_phone,
+        ref.user_code AS referrer_code,
 
-      FROM users u1
-      LEFT JOIN users u2 
-        ON u1.referred_by = u2.user_code
+        des.name AS referred_name,
+        des.lastname AS referred_lastname,
+        des.phone AS referred_phone,
+        des.user_code AS referred_code
 
-      WHERE u1.referred_by IS NOT NULL
-      ORDER BY u1.created_at DESC
+      FROM referral_tree rt
+      JOIN users ref ON ref.user_code = rt.ancestor_user_code
+      JOIN users des ON des.user_code = rt.descendant_user_code
+      ORDER BY rt.created_at DESC
     `);
 
     res.json(result.rows);
@@ -493,16 +494,21 @@ export const getMyReferrals = async (req, res) => {
     const myCode = me.rows[0].user_code;
 
     const result = await pool.query(
-      `SELECT 
-        id,
-        name AS username,
-        lastname,
-        phone,
-        created_at,
-        user_code
-      FROM users
-      WHERE referred_by = $1
-      ORDER BY created_at DESC`,
+      `
+      SELECT
+        rt.id,
+        u.name AS username,
+        u.lastname,
+        u.phone,
+        u.user_code,
+        rt.level,
+        rt.created_at
+      FROM referral_tree rt
+      JOIN users u ON u.user_code = rt.descendant_user_code
+      WHERE rt.ancestor_user_code = $1
+        AND rt.level = 1
+      ORDER BY rt.created_at DESC
+      `,
       [myCode]
     );
 
@@ -561,9 +567,14 @@ export const getMyNetwork = async (req, res) => {
 
     const buildTree = async (parentCode) => {
       const result = await pool.query(
-        `SELECT id, name, lastname, user_code 
-         FROM users 
-         WHERE referred_by = $1`,
+        `
+        SELECT u.id, u.name, u.lastname, u.user_code
+        FROM referral_tree rt
+        JOIN users u ON u.user_code = rt.descendant_user_code
+        WHERE rt.ancestor_user_code = $1
+          AND rt.level = 1
+        ORDER BY u.id ASC
+        `,
         [parentCode]
       );
 
