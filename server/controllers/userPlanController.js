@@ -16,12 +16,10 @@ const getCeilingMultiplier = (plan) => {
 const resolveUserId = async (value) => {
   if (!value) return null;
 
-  // already numeric id
   if (typeof value === "number" || /^\d+$/.test(String(value))) {
     return Number(value);
   }
 
-  // value is user_code like AVG13937
   const result = await pool.query(
     `SELECT id FROM users WHERE user_code = $1 LIMIT 1`,
     [String(value).trim()]
@@ -30,26 +28,27 @@ const resolveUserId = async (value) => {
   return result.rows[0]?.id || null;
 };
 
-const getCreditedPlanId = async (receiverUserIdOrCode) => {
-  const receiverUserId = await resolveUserId(receiverUserIdOrCode);
-  if (!receiverUserId) return null;
+const getUserCode = async (userId) => {
+  const res = await pool.query(
+    `SELECT user_code FROM users WHERE id = $1`,
+    [userId]
+  );
+  return res.rows[0]?.user_code || null;
+};
 
+const getCreditedPlanId = async (receiverUserId) => {
   let result = await pool.query(
-    `SELECT id
-     FROM user_plans
-     WHERE user_id = $1 AND status = 'active'
-     ORDER BY id DESC
-     LIMIT 1`,
+    `SELECT id FROM user_plans 
+     WHERE user_id = $1 AND status='active'
+     ORDER BY id DESC LIMIT 1`,
     [receiverUserId]
   );
 
   if (!result.rows.length) {
     result = await pool.query(
-      `SELECT id
-       FROM user_plans
+      `SELECT id FROM user_plans 
        WHERE user_id = $1
-       ORDER BY id DESC
-       LIMIT 1`,
+       ORDER BY id DESC LIMIT 1`,
       [receiverUserId]
     );
   }
@@ -59,7 +58,9 @@ const getCreditedPlanId = async (receiverUserIdOrCode) => {
 
 const insertEarning = async ({
   receiverUserId,
+  receiverUserCode,
   fromUserId,
+  fromUserCode,
   sourceUserPlanId,
   amount,
   percentage,
@@ -69,110 +70,36 @@ const insertEarning = async ({
   const creditedUserPlanId = await getCreditedPlanId(receiverUserId);
   if (!creditedUserPlanId) return;
 
-  const planRes = await pool.query(
-    `
-    SELECT up.amount, p.ceiling_limit
-    FROM user_plans up
-    JOIN plans p ON p.id = up.plan_id
-    WHERE up.id = $1
-    `,
-    [creditedUserPlanId]
-  );
-
-  const plan = planRes.rows[0];
-  if (!plan) return;
-
-  const multiplier =
-    parseFloat(String(plan.ceiling_limit).replace(/[^\d.]/g, "")) || 2;
-
-  const maxReturn = Number(plan.amount) * multiplier;
-
-  const totalRes = await pool.query(
-    `
-    SELECT 
-      COALESCE(r.total,0) AS roi,
-      COALESCE(d.total,0) AS direct,
-      COALESCE(l.total,0) AS level
-    FROM user_plans up
-
-    LEFT JOIN (
-      SELECT user_plan_id, SUM(amount) AS total
-      FROM roi_transactions
-      GROUP BY user_plan_id
-    ) r ON r.user_plan_id = up.id
-
-    LEFT JOIN (
-      SELECT credited_user_plan_id, SUM(amount) AS total
-      FROM level_income
-      WHERE income_type IN ('direct','plan_direct')
-      GROUP BY credited_user_plan_id
-    ) d ON d.credited_user_plan_id = up.id
-
-    LEFT JOIN (
-      SELECT credited_user_plan_id, SUM(amount) AS total
-      FROM level_income
-      WHERE income_type = 'level'
-      GROUP BY credited_user_plan_id
-    ) l ON l.credited_user_plan_id = up.id
-
-    WHERE up.id = $1
-    `,
-    [creditedUserPlanId]
-  );
-
-  const row = totalRes.rows[0];
-
-  const totalEarned =
-    Number(row.roi) +
-    Number(row.direct) +
-    Number(row.level);
-
-  if (totalEarned >= maxReturn) {
-    await pool.query(
-      `UPDATE user_plans SET status='completed' WHERE id=$1`,
-      [creditedUserPlanId]
-    );
-    return;
-  }
-
-  let finalAmount = Number(amount);
-
-  if (totalEarned + finalAmount > maxReturn) {
-    finalAmount = maxReturn - totalEarned;
-
-    if (finalAmount <= 0) {
-      await pool.query(
-        `UPDATE user_plans SET status='completed' WHERE id=$1`,
-        [creditedUserPlanId]
-      );
-      return;
-    }
-  }
-
   await pool.query(
     `
     INSERT INTO level_income
-    (user_id, from_user_id, user_plan_id, credited_user_plan_id, level, amount, percentage, income_type)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+    (
+      user_id,
+      from_user_id,
+      to_user_code,
+      from_user_code,
+      user_plan_id,
+      credited_user_plan_id,
+      level,
+      amount,
+      percentage,
+      income_type
+    )
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
     `,
     [
       receiverUserId,
       fromUserId,
+      receiverUserCode,
+      fromUserCode,
       sourceUserPlanId,
       creditedUserPlanId,
       level,
-      finalAmount,
+      amount,
       percentage,
       incomeType,
     ]
   );
-
-  if (totalEarned + finalAmount >= maxReturn) {
-    await pool.query(
-      `UPDATE user_plans SET status='completed' WHERE id=$1`,
-      [creditedUserPlanId]
-    );
-  }
 };
 
 /* BUY PLAN */
@@ -186,124 +113,84 @@ export const buyPlan = async (req, res) => {
     }
 
     const numericAmount = Number(amount);
-    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
-      return res.status(400).json({ message: "Amount must be greater than 0" });
-    }
 
     const planRes = await pool.query(
       "SELECT * FROM plans WHERE id = $1",
       [planId]
     );
 
-    if (!planRes.rows.length) {
-      return res.status(404).json({ message: "Plan not found" });
-    }
-
     const plan = planRes.rows[0];
-
-    const minAmount = parseNumber(plan.min_amount, 0);
-    const maxAmount = parseNumber(plan.max_amount, Infinity);
-
-    if (numericAmount < minAmount || numericAmount > maxAmount) {
-      return res.status(400).json({
-        message: `Amount must be between ${minAmount} and ${maxAmount}`,
-      });
-    }
-
-    const roiPercent = parseNumber(plan.roi, 0);
-    const ceilingMultiplier = getCeilingMultiplier(plan);
-    const dailyROI = (numericAmount * roiPercent) / 100;
-    const maxReturn = numericAmount * ceilingMultiplier;
 
     await pool.query("BEGIN");
 
     const result = await pool.query(
       `INSERT INTO user_plans
         (user_id, plan_id, amount, daily_roi, status)
-       VALUES ($1, $2, $3, $4, $5)
+       VALUES ($1, $2, $3, $4, 'active')
        RETURNING *`,
-      [userId, planId, numericAmount, dailyROI, "active"]
+      [userId, planId, numericAmount, 0]
     );
 
     const insertedPlan = result.rows[0];
 
-    // direct referrer is stored as user_code in referred_by
+    // 🔥 CURRENT USER CODE
+    const currentUserCode = await getUserCode(userId);
+
+    // 🔥 DIRECT PARENT
     const userRes = await pool.query(
       "SELECT referred_by FROM users WHERE id = $1",
       [userId]
     );
 
-    const directParentCode = userRes.rows[0]?.referred_by || null;
+    const directParentCode = userRes.rows[0]?.referred_by;
     const directParentId = await resolveUserId(directParentCode);
 
-    const directReferralPercent = parseNumber(
-      plan.direct_referral ?? plan.direct_referral_percent ?? 0,
-      0
-    );
-
-    if (directParentId && directReferralPercent > 0) {
-      const directReferralAmount =
-        (numericAmount * directReferralPercent) / 100;
-
+    /* ===== DIRECT INCOME ===== */
+    if (directParentId) {
       await insertEarning({
         receiverUserId: directParentId,
+        receiverUserCode: directParentCode,
         fromUserId: userId,
+        fromUserCode: currentUserCode,
         sourceUserPlanId: insertedPlan.id,
-        amount: directReferralAmount,
-        percentage: directReferralPercent,
+        amount: numericAmount * 0.05,
+        percentage: 5,
         level: 0,
         incomeType: "direct",
       });
     }
 
-    const levelConfigsRes = await pool.query(
-      `
-      SELECT level, percentage
-      FROM level_config
-      WHERE status = true
-      ORDER BY level ASC
-      `
-    );
-
+    /* ===== LEVEL INCOME ===== */
     let currentReceiverCode = directParentCode;
 
-    for (const lvl of levelConfigsRes.rows) {
+    for (let i = 1; i <= 10; i++) {
       if (!currentReceiverCode) break;
 
       const currentReceiverId = await resolveUserId(currentReceiverCode);
-      if (!currentReceiverId) break;
 
-      const levelPercent = parseNumber(lvl.percentage, 0);
-      if (levelPercent > 0) {
-        const levelAmount = (numericAmount * levelPercent) / 100;
-
-        await insertEarning({
-          receiverUserId: currentReceiverId,
-          fromUserId: userId,
-          sourceUserPlanId: insertedPlan.id,
-          amount: levelAmount,
-          percentage: levelPercent,
-          level: Number(lvl.level),
-          incomeType: "level",
-        });
-      }
+      await insertEarning({
+        receiverUserId: currentReceiverId,
+        receiverUserCode: currentReceiverCode,
+        fromUserId: userId,
+        fromUserCode: currentUserCode,
+        sourceUserPlanId: insertedPlan.id,
+        amount: numericAmount * 0.02,
+        percentage: 2,
+        level: i,
+        incomeType: "level",
+      });
 
       const parentRes = await pool.query(
         "SELECT referred_by FROM users WHERE user_code = $1",
-        [String(currentReceiverCode)]
+        [currentReceiverCode]
       );
 
-      currentReceiverCode = parentRes.rows[0]?.referred_by || null;
+      currentReceiverCode = parentRes.rows[0]?.referred_by;
     }
 
     await pool.query("COMMIT");
 
-    res.json({
-      ...insertedPlan,
-      max_return: maxReturn,
-      roi_percent: roiPercent,
-      ceiling_limit: plan.ceiling_limit,
-    });
+    res.json(insertedPlan);
   } catch (err) {
     await pool.query("ROLLBACK");
     console.error("buyPlan error:", err);
