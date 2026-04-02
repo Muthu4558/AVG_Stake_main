@@ -23,6 +23,7 @@ import LevelEarnings from "./pages/LevelEarnings";
 import PlansManagement from "./pages/PlansManagement";
 import ActivePlans from "./pages/ActivePlans";
 import RankRewards from "./pages/RankRewards";
+import RewardClaims from "./pages/RewardClaims";
 
 import LevelConfig from "./pages/Config-level";
 import LevelUnlockConfig from "./pages/LevelUnlock";
@@ -50,6 +51,7 @@ import UserProfile from "./pages/UserProfile";
 import UserSupportTicket from "./pages/UserSupportTicket";
 import UserBank from "./pages/UserBank";
 import UserReward from "./pages/UserReward";
+import UserRewardClaims from "./pages/UserRewardClaims";
 
 function App() {
   return (
@@ -77,6 +79,7 @@ function App() {
             <Route path="plans" element={<PlansManagement />} />
             <Route path="activeplans" element={<ActivePlans />} />
             <Route path="rewards" element={<RankRewards />} />
+            <Route path="reward-claims" element={<RewardClaims />} />
 
             {/* Transaction */}
             <Route path="deposit" element={<DepositTransactions />} />
@@ -117,6 +120,7 @@ function App() {
           <Route path="/user-support" element={<UserSupportTicket />} />
           <Route path="/user-bank" element={<UserBank />} />
           <Route path="/user-rewards" element={<UserReward />} />
+          <Route path="/user-reward-claims" element={<UserRewardClaims />} />
         </Route>
 
       </Routes>

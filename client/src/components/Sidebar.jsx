@@ -30,6 +30,10 @@ const Sidebar = () => {
       "/dashboard/all",
     ],
     earnings: ["/dashboard/roi", "/dashboard/direct", "/dashboard/level"],
+    rewards: [
+      "/dashboard/rewards",
+      "/dashboard/reward-claims"
+    ],
     config: [
       "/dashboard/config-level",
       "/dashboard/config-unlock",
@@ -116,9 +120,8 @@ const Sidebar = () => {
           <p className="section-label">MANAGEMENT</p>
 
           <div
-            className={`menu-item ${
-              isSubActive(sections.user) ? "active parent-active" : ""
-            }`}
+            className={`menu-item ${isSubActive(sections.user) ? "active parent-active" : ""
+              }`}
             onClick={() => toggleMenu("user")}
             role="button"
             tabIndex={0}
@@ -135,9 +138,8 @@ const Sidebar = () => {
           {openMenu === "user" && (
             <div className="submenu">
               <div
-                className={`submenu-item ${
-                  isActive("/dashboard/users") ? "active" : ""
-                }`}
+                className={`submenu-item ${isActive("/dashboard/users") ? "active" : ""
+                  }`}
                 onClick={() => go("/dashboard/users")}
                 role="button"
                 tabIndex={0}
@@ -146,9 +148,8 @@ const Sidebar = () => {
               </div>
 
               <div
-                className={`submenu-item ${
-                  isActive("/dashboard/referral") ? "active" : ""
-                }`}
+                className={`submenu-item ${isActive("/dashboard/referral") ? "active" : ""
+                  }`}
                 onClick={() => go("/dashboard/referral")}
                 role="button"
                 tabIndex={0}
@@ -157,9 +158,8 @@ const Sidebar = () => {
               </div>
 
               <div
-                className={`submenu-item ${
-                  isActive("/dashboard/bank") ? "active" : ""
-                }`}
+                className={`submenu-item ${isActive("/dashboard/bank") ? "active" : ""
+                  }`}
                 onClick={() => go("/dashboard/bank")}
                 role="button"
                 tabIndex={0}
@@ -182,9 +182,8 @@ const Sidebar = () => {
           </div>
 
           <div
-            className={`menu-item ${
-              isActive("/dashboard/activeplans") ? "active" : ""
-            }`}
+            className={`menu-item ${isActive("/dashboard/activeplans") ? "active" : ""
+              }`}
             onClick={() => go("/dashboard/activeplans")}
             role="button"
             tabIndex={0}
@@ -198,9 +197,8 @@ const Sidebar = () => {
           <p className="section-label">HISTORY</p>
 
           <div
-            className={`menu-item ${
-              isSubActive(sections.transactions) ? "active parent-active" : ""
-            }`}
+            className={`menu-item ${isSubActive(sections.transactions) ? "active parent-active" : ""
+              }`}
             onClick={() => toggleMenu("transactions")}
             role="button"
             tabIndex={0}
@@ -221,9 +219,8 @@ const Sidebar = () => {
           {openMenu === "transactions" && (
             <div className="submenu">
               <div
-                className={`submenu-item ${
-                  isActive("/dashboard/deposit") ? "active" : ""
-                }`}
+                className={`submenu-item ${isActive("/dashboard/deposit") ? "active" : ""
+                  }`}
                 onClick={() => go("/dashboard/deposit")}
                 role="button"
                 tabIndex={0}
@@ -232,9 +229,8 @@ const Sidebar = () => {
               </div>
 
               <div
-                className={`submenu-item ${
-                  isActive("/dashboard/withdraw") ? "active" : ""
-                }`}
+                className={`submenu-item ${isActive("/dashboard/withdraw") ? "active" : ""
+                  }`}
                 onClick={() => go("/dashboard/withdraw")}
                 role="button"
                 tabIndex={0}
@@ -243,9 +239,8 @@ const Sidebar = () => {
               </div>
 
               <div
-                className={`submenu-item ${
-                  isActive("/dashboard/all") ? "active" : ""
-                }`}
+                className={`submenu-item ${isActive("/dashboard/all") ? "active" : ""
+                  }`}
                 onClick={() => go("/dashboard/all")}
                 role="button"
                 tabIndex={0}
@@ -256,9 +251,8 @@ const Sidebar = () => {
           )}
 
           <div
-            className={`menu-item ${
-              isSubActive(sections.earnings) ? "active parent-active" : ""
-            }`}
+            className={`menu-item ${isSubActive(sections.earnings) ? "active parent-active" : ""
+              }`}
             onClick={() => toggleMenu("earnings")}
             role="button"
             tabIndex={0}
@@ -279,9 +273,8 @@ const Sidebar = () => {
           {openMenu === "earnings" && (
             <div className="submenu">
               <div
-                className={`submenu-item ${
-                  isActive("/dashboard/roi") ? "active" : ""
-                }`}
+                className={`submenu-item ${isActive("/dashboard/roi") ? "active" : ""
+                  }`}
                 onClick={() => go("/dashboard/roi")}
                 role="button"
                 tabIndex={0}
@@ -290,9 +283,8 @@ const Sidebar = () => {
               </div>
 
               <div
-                className={`submenu-item ${
-                  isActive("/dashboard/direct") ? "active" : ""
-                }`}
+                className={`submenu-item ${isActive("/dashboard/direct") ? "active" : ""
+                  }`}
                 onClick={() => go("/dashboard/direct")}
                 role="button"
                 tabIndex={0}
@@ -301,9 +293,8 @@ const Sidebar = () => {
               </div>
 
               <div
-                className={`submenu-item ${
-                  isActive("/dashboard/level") ? "active" : ""
-                }`}
+                className={`submenu-item ${isActive("/dashboard/level") ? "active" : ""
+                  }`}
                 onClick={() => go("/dashboard/level")}
                 role="button"
                 tabIndex={0}
@@ -314,10 +305,9 @@ const Sidebar = () => {
           )}
 
           <div
-            className={`menu-item ${
-              isActive("/dashboard/rewards") ? "active" : ""
-            }`}
-            onClick={() => go("/dashboard/rewards")}
+            className={`menu-item ${isSubActive(sections.rewards) ? "active parent-active" : ""
+              }`}
+            onClick={() => toggleMenu("rewards")}
             role="button"
             tabIndex={0}
           >
@@ -325,14 +315,40 @@ const Sidebar = () => {
               <FiAward />
             </span>
             <span className="menu-text">Reward</span>
+            <span className="menu-arrow">
+              {openMenu === "rewards" ? <FiChevronDown /> : <FiChevronRight />}
+            </span>
           </div>
+
+          {openMenu === "rewards" && (
+            <div className="submenu">
+              <div
+                className={`submenu-item ${isActive("/dashboard/rewards") ? "active" : ""
+                  }`}
+                onClick={() => go("/dashboard/rewards")}
+                role="button"
+                tabIndex={0}
+              >
+                Rewards
+              </div>
+
+              <div
+                className={`submenu-item ${isActive("/dashboard/reward-claims") ? "active" : ""
+                  }`}
+                onClick={() => go("/dashboard/reward-claims")}
+                role="button"
+                tabIndex={0}
+              >
+                Monthly Claims
+              </div>
+            </div>
+          )}
 
           <p className="section-label">CONFIGURATION</p>
 
           <div
-            className={`menu-item ${
-              isSubActive(sections.config) ? "active parent-active" : ""
-            }`}
+            className={`menu-item ${isSubActive(sections.config) ? "active parent-active" : ""
+              }`}
             onClick={() => toggleMenu("config")}
             role="button"
             tabIndex={0}
@@ -349,9 +365,8 @@ const Sidebar = () => {
           {openMenu === "config" && (
             <div className="submenu">
               <div
-                className={`submenu-item ${
-                  isActive("/dashboard/config-level") ? "active" : ""
-                }`}
+                className={`submenu-item ${isActive("/dashboard/config-level") ? "active" : ""
+                  }`}
                 onClick={() => go("/dashboard/config-level")}
                 role="button"
                 tabIndex={0}
@@ -360,9 +375,8 @@ const Sidebar = () => {
               </div>
 
               <div
-                className={`submenu-item ${
-                  isActive("/dashboard/config-unlock") ? "active" : ""
-                }`}
+                className={`submenu-item ${isActive("/dashboard/config-unlock") ? "active" : ""
+                  }`}
                 onClick={() => go("/dashboard/config-unlock")}
                 role="button"
                 tabIndex={0}
@@ -371,9 +385,8 @@ const Sidebar = () => {
               </div>
 
               <div
-                className={`submenu-item ${
-                  isActive("/dashboard/config-rank") ? "active" : ""
-                }`}
+                className={`submenu-item ${isActive("/dashboard/config-rank") ? "active" : ""
+                  }`}
                 onClick={() => go("/dashboard/config-rank")}
                 role="button"
                 tabIndex={0}
@@ -386,9 +399,8 @@ const Sidebar = () => {
           <p className="section-label">ACCOUNT</p>
 
           <div
-            className={`menu-item ${
-              isSubActive(sections.account) ? "active parent-active" : ""
-            }`}
+            className={`menu-item ${isSubActive(sections.account) ? "active parent-active" : ""
+              }`}
             onClick={() => toggleMenu("account")}
             role="button"
             tabIndex={0}
@@ -405,9 +417,8 @@ const Sidebar = () => {
           {openMenu === "account" && (
             <div className="submenu">
               <div
-                className={`submenu-item ${
-                  isActive("/dashboard/profile") ? "active" : ""
-                }`}
+                className={`submenu-item ${isActive("/dashboard/profile") ? "active" : ""
+                  }`}
                 onClick={() => go("/dashboard/profile")}
                 role="button"
                 tabIndex={0}
@@ -416,9 +427,8 @@ const Sidebar = () => {
               </div>
 
               <div
-                className={`submenu-item ${
-                  isActive("/dashboard/support") ? "active" : ""
-                }`}
+                className={`submenu-item ${isActive("/dashboard/support") ? "active" : ""
+                  }`}
                 onClick={() => go("/dashboard/support")}
                 role="button"
                 tabIndex={0}

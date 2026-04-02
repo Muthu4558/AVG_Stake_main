@@ -199,12 +199,12 @@ const NAVBAR = () => {
       setLoading(true);
 
       const res = await axios.post(
-  "http://localhost:5000/api/auth/verify-signup-otp",
-  {
-    signupId,   // 🔥 THIS IS THE FIX
-    otp: otpData.otp,
-  }
-);
+        "http://localhost:5000/api/auth/verify-signup-otp",
+        {
+          signupId,   // 🔥 THIS IS THE FIX
+          otp: otpData.otp,
+        }
+      );
 
       setCreatedUserCode(res.data.user_code || "");
       setShowOtpModal(false);
@@ -280,8 +280,8 @@ const NAVBAR = () => {
 
   const referralLink = createdUserCode
     ? `${window.location.origin}/auth/registration?referral_code=${encodeURIComponent(
-        createdUserCode
-      )}`
+      createdUserCode
+    )}`
     : "";
 
   return (

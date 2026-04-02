@@ -90,6 +90,13 @@ export const getRanksUser = async (req, res) => {
   try {
     const userId = req.user.id;
 
+    // 🔥 GET USER CODE
+    const userRes = await pool.query(
+      "SELECT user_code FROM users WHERE id = $1",
+      [userId]
+    );
+    const userCode = userRes.rows[0]?.user_code;
+
     // 👉 get all ranks
     const rankRes = await pool.query(`
       SELECT id, target_amount, reward
@@ -101,21 +108,24 @@ export const getRanksUser = async (req, res) => {
     const ranks = rankRes.rows;
     if (ranks.length === 0) return res.json([]);
 
-    // 👉 direct referrals
+    // 👉 direct referrals (FIXED)
     const directRes = await pool.query(`
-      SELECT id, name, lastname
+      SELECT id, name, lastname, user_code
       FROM users
-      WHERE referred_by::int = $1
-    `, [userId]);
+      WHERE referred_by = $1
+    `, [userCode]);
 
+    // 🔥 FIXED RECURSIVE
     const getBranchBusiness = async (rootId) => {
       const result = await pool.query(`
         WITH RECURSIVE branch AS (
-          SELECT id FROM users WHERE id = $1
+          SELECT id, user_code FROM users WHERE id = $1
+
           UNION ALL
-          SELECT u.id
+
+          SELECT u.id, u.user_code
           FROM users u
-          JOIN branch b ON u.referred_by::int = b.id
+          JOIN branch b ON u.referred_by = b.user_code
         )
         SELECT COALESCE(SUM(amount),0) AS total
         FROM user_plans
@@ -125,7 +135,7 @@ export const getRanksUser = async (req, res) => {
       return Number(result.rows[0].total || 0);
     };
 
-    // 👉 calculate branches ONCE
+    // 👉 calculate branches
     const branches = [];
 
     for (const user of directRes.rows) {
@@ -178,7 +188,6 @@ export const getRanksUser = async (req, res) => {
 
       const unlocked = progress >= rank.target_amount;
 
-      // 👉 status from DB
       const rewardRow = await pool.query(
         `SELECT status 
          FROM user_rewards 
@@ -189,7 +198,6 @@ export const getRanksUser = async (req, res) => {
 
       const status = rewardRow.rows[0]?.status || "pending";
 
-      // 👉 push ALL completed + current
       results.push({
         reward: rank.reward,
         target_amount: rank.target_amount,
@@ -199,7 +207,6 @@ export const getRanksUser = async (req, res) => {
         timeline
       });
 
-      // 🔥 STOP at current active rank
       if (status !== "approved") break;
     }
 
@@ -224,7 +231,7 @@ export const getAllUsersRewards = async (req, res) => {
     if (ranks.length === 0) return res.json([]);
 
     const usersRes = await pool.query(`
-      SELECT id, name, lastname, phone
+      SELECT id, name, lastname, phone, user_code
       FROM users
       ORDER BY id DESC
     `);
@@ -232,11 +239,13 @@ export const getAllUsersRewards = async (req, res) => {
     const getBranchBusiness = async (rootId) => {
       const result = await pool.query(`
         WITH RECURSIVE branch AS (
-          SELECT id FROM users WHERE id = $1
+          SELECT id, user_code FROM users WHERE id = $1
+
           UNION ALL
-          SELECT u.id
+
+          SELECT u.id, u.user_code
           FROM users u
-          JOIN branch b ON u.referred_by::int = b.id
+          JOIN branch b ON u.referred_by = b.user_code
         )
         SELECT COALESCE(SUM(amount),0) AS total
         FROM user_plans
@@ -250,11 +259,12 @@ export const getAllUsersRewards = async (req, res) => {
 
     for (const user of usersRes.rows) {
 
+      // 🔥 FIXED direct users
       const directRes = await pool.query(`
-        SELECT id, name, lastname
+        SELECT id, name, lastname, user_code
         FROM users
-        WHERE referred_by::int = $1
-      `, [user.id]);
+        WHERE referred_by = $1
+      `, [user.user_code]);
 
       const branches = [];
 
@@ -268,10 +278,6 @@ export const getAllUsersRewards = async (req, res) => {
       }
 
       branches.sort((a, b) => b.business - a.business);
-
-      // =========================
-      // 🔥 LOOP ALL RANKS
-      // =========================
 
       for (const rank of ranks) {
 
@@ -310,7 +316,6 @@ export const getAllUsersRewards = async (req, res) => {
 
         const unlocked = progress >= rank.target_amount;
 
-        // 👉 status
         const rewardRow = await pool.query(
           `SELECT status 
            FROM user_rewards 
@@ -321,7 +326,6 @@ export const getAllUsersRewards = async (req, res) => {
 
         const status = rewardRow.rows[0]?.status || "pending";
 
-        // ✅ PUSH EVERY RANK UNTIL CURRENT
         finalData.push({
           userId: user.id,
           username: `${user.name} ${user.lastname}`,
@@ -334,7 +338,6 @@ export const getAllUsersRewards = async (req, res) => {
           timeline
         });
 
-        // 🔥 STOP after current active rank
         if (status !== "approved") break;
       }
     }

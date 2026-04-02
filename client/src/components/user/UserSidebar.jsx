@@ -168,7 +168,19 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
 
         {/* REWARD */}
         <p className="us-section">REWARD</p>
-        <MenuItem icon={<FaTrophy />} label="Rewards" to="/user-rewards" />
+
+        <MenuItem
+          icon={<FaTrophy />}
+          label="Rewards"
+          hasDropdown
+          menuKey="rewards"
+        />
+
+        <div className={`us-dropdown ${openMenu === "rewards" ? "open" : ""}`}>
+          <SubItem label="Rewards" to="/user-rewards" />
+          <SubItem label="Monthly Claims" to="/user-monthly-claims" />
+        </div>
+        {/* <MenuItem icon={<FaTrophy />} label="Rewards" to="/user-rewards" /> */}
 
         {/* ACCOUNT */}
         <p className="us-section">ACCOUNT</p>
