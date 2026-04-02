@@ -13,24 +13,66 @@ const pool = new Pool({
 });
 
 const clean = (val) => {
-  if (!val) return null;
-  return val.toString().trim();
+  if (val === null || val === undefined) return null;
+  const str = String(val).trim();
+  return str.length ? str : null;
 };
 
 const parseNumber = (val) => {
-  if (!val) return 0;
+  if (val === null || val === undefined || val === "") return 0;
   const num = String(val).replace(/[^\d.]/g, "");
   return parseFloat(num) || 0;
 };
 
-const importIncome = async () => {
+const findUserIdByCode = async (client, userCode) => {
+  const res = await client.query(
+    `SELECT id FROM users WHERE user_code = $1 LIMIT 1`,
+    [userCode]
+  );
+  return res.rows[0]?.id || null;
+};
+
+const findLatestPlanId = async (client, userId, createdAt) => {
+  if (!userId) return null;
+
+  if (createdAt) {
+    const byDate = await client.query(
+      `
+      SELECT id
+      FROM user_plans
+      WHERE user_id = $1
+        AND created_at <= $2
+      ORDER BY created_at DESC, id DESC
+      LIMIT 1
+      `,
+      [userId, createdAt]
+    );
+
+    if (byDate.rows[0]) return byDate.rows[0].id;
+  }
+
+  const fallback = await client.query(
+    `
+    SELECT id
+    FROM user_plans
+    WHERE user_id = $1
+    ORDER BY created_at DESC, id DESC
+    LIMIT 1
+    `,
+    [userId]
+  );
+
+  return fallback.rows[0]?.id || null;
+};
+
+const importLevelIncome = async () => {
   const client = await pool.connect();
 
   try {
-    console.log("🚀 Import started...");
+    console.log("Importing level/direct income...");
     await client.query("BEGIN");
 
-    const workbook = xlsx.readFile("./income.xlsx"); // 👈 your file
+    const workbook = xlsx.readFile("./levelIncome.xlsx");
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const data = xlsx.utils.sheet_to_json(sheet, { header: 1 });
 
@@ -45,88 +87,85 @@ const importIncome = async () => {
       const level = Number(row[2]) || 0;
       const amount = parseNumber(row[3]);
       const percentage = parseNumber(row[4]);
-      const incomeType = clean(row[5])?.toLowerCase();
+      const incomeType = (clean(row[5]) || "").toLowerCase();
       const createdAt = row[6] ? new Date(row[6]) : new Date();
 
-      // ✅ VALIDATION
       if (!toCode || !fromCode || !incomeType) {
-        console.log(`❌ Missing data at row ${i}`);
+        console.log(`Skipping row ${i}: missing required values`);
         skipped++;
         continue;
       }
 
       if (!["direct", "level"].includes(incomeType)) {
-        console.log(`❌ Invalid income_type at row ${i}`);
+        console.log(`Skipping row ${i}: invalid income_type`);
         skipped++;
         continue;
       }
 
-      // 🔥 GET IDs
-      const toUser = await client.query(
-        "SELECT id FROM users WHERE user_code = $1",
-        [toCode]
-      );
+      const toUserId = await findUserIdByCode(client, toCode);
+      const fromUserId = await findUserIdByCode(client, fromCode);
 
-      const fromUser = await client.query(
-        "SELECT id FROM users WHERE user_code = $1",
-        [fromCode]
-      );
-
-      if (!toUser.rows.length || !fromUser.rows.length) {
-        console.log(`❌ User not found at row ${i}`);
+      if (!toUserId || !fromUserId) {
+        console.log(`Skipping row ${i}: user not found`);
         skipped++;
         continue;
       }
 
-      const toUserId = toUser.rows[0].id;
-      const fromUserId = fromUser.rows[0].id;
+      const creditedUserPlanId = await findLatestPlanId(client, toUserId, createdAt);
+      const sourceUserPlanId = await findLatestPlanId(client, fromUserId, createdAt);
 
-      // 🔥 INSERT
+      if (!creditedUserPlanId || !sourceUserPlanId) {
+        console.log(`Skipping row ${i}: missing plan for source or receiver`);
+        skipped++;
+        continue;
+      }
+
       await client.query(
         `
         INSERT INTO level_income
         (
           user_id,
           from_user_id,
-          from_user_code,
-          to_user_code,
+          user_plan_id,
+          credited_user_plan_id,
           level,
           amount,
           percentage,
           income_type,
-          created_at
+          created_at,
+          from_user_code,
+          to_user_code
         )
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
         `,
         [
           toUserId,
           fromUserId,
-          fromCode,
-          toCode,
+          sourceUserPlanId,
+          creditedUserPlanId,
           level,
           amount,
           percentage,
           incomeType,
           createdAt,
+          fromCode,
+          toCode,
         ]
       );
 
       inserted++;
-      console.log(`✅ ${fromCode} → ${toCode}`);
+      console.log(`Inserted row ${i}: ${fromCode} -> ${toCode} (${incomeType})`);
     }
 
     await client.query("COMMIT");
 
-    console.log("🎉 DONE");
-    console.log(`✅ Inserted: ${inserted}`);
-    console.log(`⚠️ Skipped: ${skipped}`);
-
+    console.log(`Done. Inserted: ${inserted}, Skipped: ${skipped}`);
   } catch (err) {
     await client.query("ROLLBACK");
-    console.error("❌ Import failed", err);
+    console.error("Import failed:", err);
   } finally {
     client.release();
   }
 };
 
-importIncome();
+importLevelIncome();

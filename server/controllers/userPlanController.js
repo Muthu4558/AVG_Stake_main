@@ -310,7 +310,7 @@ export const getROIHistory = async (req, res) => {
         u.user_code AS to_id,
         'Admin' AS from_user,
         'SYSTEM' AS from_id,
-        r.total_earned AS amount,
+        r.amount AS amount,
         r.created_at   -- ✅ FIXED HERE
       FROM roi_transactions r
       JOIN users u ON u.id = r.user_id
@@ -335,7 +335,7 @@ export const getAllROI = async (req, res) => {
         u.user_code AS to_id,
         'Admin' AS from_user,
         'SYSTEM' AS from_id,
-        r.total_earned AS amount,
+        r.amount AS amount,
         r.created_at
       FROM roi_transactions r
       JOIN users u ON u.id = r.user_id
@@ -461,7 +461,7 @@ export const getAllTransactions = async (req, res) => {
         u.name AS to_user,
         u.user_code AS to_id,
         'Daily ROI Income' AS type,
-        r.total_earned AS amount,
+        r.amount AS amount,
         r.created_at
       FROM roi_transactions r
       JOIN users u ON u.id = r.user_id
@@ -530,7 +530,7 @@ export const getAllTransactionsAdmin = async (req, res) => {
         u.name AS to_user,
         u.user_code AS to_id,
         'ROI Income' AS type,
-        r.total_earned AS amount,
+        r.amount AS amount,
         r.created_at
       FROM roi_transactions r
       JOIN users u ON u.id = r.user_id
