@@ -50,7 +50,7 @@ const UserRewardClaims = () => {
           ) : (
             claims.map((claim, index) => (
               <div className="rewardCard" key={index}>
-                
+
                 {/* TOP */}
                 <div className="rewardCardTop">
                   <div className="rewardTitleBlock">
@@ -81,6 +81,7 @@ const UserRewardClaims = () => {
                         <th>Month</th>
                         <th>Due Date</th>
                         <th>Amount</th>
+                        <th>Transaction ID</th>
                         <th>Status</th>
                       </tr>
                     </thead>
@@ -88,12 +89,24 @@ const UserRewardClaims = () => {
                     <tbody>
                       {claim.claim_months?.map((m, i) => (
                         <tr key={i}>
-                          <td>{m.month_label}</td>
-                          <td>{m.due_date}</td>
-                          <td>₹{m.amount}</td>
+                          <td>{m.month_no}</td>
                           <td>
-                            <span className="statusBadge pending">
-                              {m.status}
+                            {m.due_date
+                              ? new Date(m.due_date).toLocaleDateString("en-IN", {
+                                day: "2-digit",
+                                month: "short",
+                                year: "numeric",
+                              })
+                              : "-"}
+                          </td>
+                          <td>₹{m.amount}</td>
+                          <td>{m.transaction_id || "-"}</td>
+                          <td>
+                            <span
+                              className={`statusBadge ${m.status === "completed" ? "success" : "pending"
+                                }`}
+                            >
+                              {m.status === "completed" ? "Completed" : "Pending"}
                             </span>
                           </td>
                         </tr>

@@ -23,6 +23,7 @@ body {
     opacity: 0;
     transform: translateY(8px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -4678,7 +4679,7 @@ body {
   justify-content: space-between;
   align-items: center;
   transition: 0.3s;
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .dash-card:hover {
@@ -4732,7 +4733,7 @@ body {
   background: rgba(19, 47, 117, 0.6);
   padding: 18px;
   border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .dash-section-header {
@@ -4772,6 +4773,7 @@ body {
 }
 
 @media (max-width: 700px) {
+
   .dash-grid-3,
   .dash-grid-2 {
     grid-template-columns: 1fr;
@@ -13934,10 +13936,10 @@ td {
 }
 
 /* =========== reward claims ============ */
-.rc-container {
-  padding: 20px;
-  /* background: #f5f6fa; */
-  min-height: 100vh;
+/* Container */
+.rc-card-container {
+  display: grid;
+  gap: 20px;
 }
 
 .rc-title {
@@ -13946,13 +13948,93 @@ td {
   margin-bottom: 20px;
 }
 
-.rc-table-wrapper {
-  overflow-x: auto;
-  /* background: white; */
-  border-radius: 10px;
-  padding: 10px;
+/* Card */
+.rc-card {
+  background: #132f75;
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
+/* Header */
+.rc-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.rc-card-header h3 {
+  font-size: 18px;
+  margin: 0;
+}
+
+.rc-card-header p {
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.rc-target {
+  font-weight: bold;
+  color: #22c55e;
+}
+
+/* Form */
+.rc-card-form {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+  margin-bottom: 15px;
+}
+
+.rc-field {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  gap: 4px;
+}
+
+.rc-input {
+  border: 1px solid #334155;
+  /* background: #020617; */
+  color: white;
+  padding: 8px;
+  border-radius: 8px;
+  width: 130px;
+}
+
+.rc-input-wide {
+  width: 160px;
+}
+
+.rc-select {
+  padding: 8px;
+  border-radius: 8px;
+  background: #020617;
+  color: white;
+  border: 1px solid #334155;
+}
+
+/* Buttons */
+.rc-save-btn {
+  background: #00e676;
+  color: white;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.rc-update-btn {
+  background: #22c55e;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+}
+
+/* Table */
 .rc-table {
   width: 100%;
   border-collapse: collapse;
@@ -13961,34 +14043,20 @@ td {
 .rc-table th,
 .rc-table td {
   padding: 10px;
-  border-bottom: 1px solid #ddd;
-  text-align: left;
+  border-bottom: 1px solid #334155;
+  font-size: 13px;
 }
 
 .rc-table th {
-  /* background: #f0f0f0; */
+  color: #94a3b8;
 }
 
-.rc-table input {
-  padding: 6px;
-  /* border: 1px solid #ccc; */
-  border-radius: 6px;
-  width: 100px;
+/* Month box */
+.rc-month-box {
+  /* background: #020617; */
+  padding: 12px;
+  border-radius: 10px;
 }
-
-.rc-table button {
-  padding: 6px 12px;
-  border: none;
-  background: #007bff;
-  /* color: white; */
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.rc-table button:hover {
-  background: #0056b3;
-}
-
 
 /* ========== user reward claims ============ */
 .urc-container {

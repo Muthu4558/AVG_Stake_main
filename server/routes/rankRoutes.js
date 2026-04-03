@@ -12,6 +12,7 @@ import {
   getRewardClaimsAdmin,
   saveRewardClaim,
   getUserRewardClaims,
+  updateClaimMonthStatus,
 } from "../controllers/rankController.js";
 
 const router = express.Router();
@@ -30,5 +31,6 @@ router.post("/status", verifyToken, isAdmin, updateRewardStatus);
 router.get("/claims/admin", verifyToken, isAdmin, getRewardClaimsAdmin);
 router.post("/claims", verifyToken, isAdmin, saveRewardClaim);
 router.get("/claims/user", verifyToken, getUserRewardClaims);
+router.post("/claims/month-status", verifyToken, isAdmin, updateClaimMonthStatus);
 
 export default router;

@@ -401,12 +401,9 @@ const buildClaimMonths = (startDate, monthsCount, monthlyAmount) => {
 
     months.push({
       month_no: i + 1,
-      month_label: monthDate.toLocaleString("en-IN", {
-        month: "long",
-        year: "numeric",
-      }),
       due_date: formatDate(monthDate),
       amount: Number(monthlyAmount || 0),
+      transaction_id: null,
       status: "pending",
     });
   }
@@ -414,53 +411,66 @@ const buildClaimMonths = (startDate, monthsCount, monthlyAmount) => {
   return months;
 };
 
+const attachMonthsToClaims = async (rows) => {
+  for (const row of rows) {
+    const monthsRes = await pool.query(
+      `
+      SELECT id, month_no, due_date, amount, transaction_id, status
+      FROM reward_claim_months
+      WHERE claim_id = $1
+      ORDER BY month_no ASC
+      `,
+      [row.claim_id]
+    );
+
+    row.claim_months = monthsRes.rows.map((m) => ({
+      ...m,
+      amount: Number(m.amount || 0),
+    }));
+  }
+
+  return rows;
+};
+
 export const getRewardClaimsAdmin = async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT
-        ur.user_id,
-        u.name,
-        u.lastname,
-        u.phone,
-        u.user_code,
-        ur.reward,
-        ur.target_amount,
-        ur.status AS reward_status,
-        ur.progress,
-        rc.id AS claim_id,
-        rc.monthly_amount,
-        rc.months_count,
-        rc.start_date,
-        rc.status AS claim_status,
-        rc.created_at,
-        rc.updated_at
-      FROM user_rewards ur
-      INNER JOIN users u ON u.id = ur.user_id
-      LEFT JOIN reward_claims rc
-        ON rc.user_id = ur.user_id
-       AND rc.reward = ur.reward
-       AND rc.target_amount = ur.target_amount
-      WHERE ur.status = 'approved'
-      ORDER BY ur.id DESC
+  COALESCE(rc.id, 0) AS claim_id,
+  ur.user_id,
+  u.name,
+  u.lastname,
+  u.phone,
+  u.user_code,
+  ur.reward,
+  ur.target_amount,
+  rc.monthly_amount,
+  rc.months_count,
+  rc.start_date,
+  rc.status AS claim_status,
+  ur.status AS reward_status,
+  ur.progress
+FROM user_rewards ur
+INNER JOIN users u ON u.id = ur.user_id
+LEFT JOIN reward_claims rc
+  ON rc.user_id = ur.user_id
+ AND rc.reward = ur.reward
+ AND rc.target_amount = ur.target_amount
+WHERE ur.status = 'approved'
+ORDER BY ur.user_id DESC
     `);
 
-    const rows = result.rows.map((row) => ({
+    const rows = await attachMonthsToClaims(result.rows);
+
+    const formatted = rows.map((row) => ({
       ...row,
-      monthly_amount: row.monthly_amount !== null ? Number(row.monthly_amount) : null,
-      target_amount: Number(row.target_amount),
-      progress: Number(row.progress || 0),
+      monthly_amount: Number(row.monthly_amount || 0),
+      target_amount: Number(row.target_amount || 0),
       months_count: Number(row.months_count || 12),
-      claim_months:
-        row.claim_id
-          ? buildClaimMonths(
-              row.start_date || row.created_at,
-              Number(row.months_count || 12),
-              row.monthly_amount
-            )
-          : [],
+      progress: Number(row.progress || 0),
     }));
 
-    res.json(rows);
+    res.json(formatted);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
@@ -468,6 +478,8 @@ export const getRewardClaimsAdmin = async (req, res) => {
 };
 
 export const saveRewardClaim = async (req, res) => {
+  const client = await pool.connect();
+
   try {
     const {
       userId,
@@ -484,7 +496,9 @@ export const saveRewardClaim = async (req, res) => {
 
     const claimStartDate = start_date || new Date().toISOString().slice(0, 10);
 
-    const result = await pool.query(
+    await client.query("BEGIN");
+
+    const result = await client.query(
       `
       INSERT INTO reward_claims
         (user_id, reward, target_amount, monthly_amount, months_count, start_date, status, updated_at)
@@ -509,23 +523,45 @@ export const saveRewardClaim = async (req, res) => {
       ]
     );
 
+    const claim = result.rows[0];
+
+    await client.query(
+      `DELETE FROM reward_claim_months WHERE claim_id = $1`,
+      [claim.id]
+    );
+
+    const months = buildClaimMonths(claimStartDate, months_count, monthly_amount);
+
+    for (const m of months) {
+      await client.query(
+        `
+        INSERT INTO reward_claim_months
+          (claim_id, month_no, due_date, amount, transaction_id, status, updated_at)
+        VALUES
+          ($1,$2,$3,$4,NULL,'pending',NOW())
+        `,
+        [claim.id, m.month_no, m.due_date, m.amount]
+      );
+    }
+
+    await client.query("COMMIT");
+
     res.json({
       message: "Reward claim saved",
       claim: {
-        ...result.rows[0],
-        monthly_amount: Number(result.rows[0].monthly_amount),
-        target_amount: Number(result.rows[0].target_amount),
-        months_count: Number(result.rows[0].months_count),
-        claim_months: buildClaimMonths(
-          result.rows[0].start_date,
-          Number(result.rows[0].months_count || 12),
-          result.rows[0].monthly_amount
-        ),
+        ...claim,
+        monthly_amount: Number(claim.monthly_amount),
+        target_amount: Number(claim.target_amount),
+        months_count: Number(claim.months_count),
+        claim_months: months,
       },
     });
   } catch (err) {
+    await client.query("ROLLBACK");
     console.error(err);
     res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
   }
 };
 
@@ -559,20 +595,43 @@ export const getUserRewardClaims = async (req, res) => {
       [userId]
     );
 
-    const rows = result.rows.map((row) => ({
+    const rows = await attachMonthsToClaims(result.rows);
+
+    const formatted = rows.map((row) => ({
       ...row,
       monthly_amount: Number(row.monthly_amount || 0),
       target_amount: Number(row.target_amount || 0),
       months_count: Number(row.months_count || 12),
       progress: Number(row.progress || 0),
-      claim_months: buildClaimMonths(
-        row.start_date || row.created_at,
-        Number(row.months_count || 12),
-        row.monthly_amount
-      ),
     }));
 
-    res.json(rows);
+    res.json(formatted);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+export const updateClaimMonthStatus = async (req, res) => {
+  try {
+    const { monthId, transaction_id, status } = req.body;
+
+    if (!monthId || !status) {
+      return res.status(400).json({ message: "Missing fields" });
+    }
+
+    await pool.query(
+      `
+      UPDATE reward_claim_months
+      SET transaction_id = $1,
+          status = $2,
+          updated_at = NOW()
+      WHERE id = $3
+      `,
+      [transaction_id || null, status, monthId]
+    );
+
+    res.json({ message: "Month status updated" });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });
