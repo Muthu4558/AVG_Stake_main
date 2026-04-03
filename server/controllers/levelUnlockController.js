@@ -18,14 +18,15 @@ export const createLevelUnlock = async (req, res) => {
   try {
     const { level, direct_staking } = req.body;
 
-    if (!level || !direct_staking) {
+    // ✅ FIXED VALIDATION
+    if (level === undefined || direct_staking === undefined) {
       return res.status(400).json({ message: "All fields required" });
     }
 
     const result = await pool.query(
       `INSERT INTO level_unlock_config (level, direct_staking)
        VALUES ($1,$2) RETURNING *`,
-      [level, direct_staking]
+      [Number(level), Number(direct_staking)]
     );
 
     res.json(result.rows[0]);
@@ -41,11 +42,16 @@ export const updateLevelUnlock = async (req, res) => {
     const { id } = req.params;
     const { level, direct_staking } = req.body;
 
+    // ✅ ALSO FIX HERE (important)
+    if (level === undefined || direct_staking === undefined) {
+      return res.status(400).json({ message: "All fields required" });
+    }
+
     await pool.query(
       `UPDATE level_unlock_config 
        SET level=$1, direct_staking=$2
        WHERE id=$3`,
-      [level, direct_staking, id]
+      [Number(level), Number(direct_staking), id]
     );
 
     res.json({ message: "Updated" });

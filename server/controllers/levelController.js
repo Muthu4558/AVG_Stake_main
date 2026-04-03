@@ -14,6 +14,22 @@ const getActiveLevelConfigs = async (client) => {
   }));
 };
 
+const getLevelUnlockRequirement = async (client, level) => {
+  if (level <= 1) return 0;
+
+  const result = await client.query(
+    `
+    SELECT direct_staking
+    FROM level_unlock_config
+    WHERE level = $1 AND status = true
+    LIMIT 1
+    `,
+    [level]
+  );
+
+  return Number(result.rows[0]?.direct_staking || 0);
+};
+
 const getUplineUserId = async (client, userId) => {
   const result = await client.query(
     `SELECT referred_by FROM users WHERE id = $1`,
@@ -64,6 +80,79 @@ const getReceiverPlanId = async (client, receiverUserId) => {
   return result.rows[0]?.id ?? null;
 };
 
+const getBranchBusinessTotal = async (client, rootUserId, excludeBuyerId = null) => {
+  const rootRes = await client.query(
+    `
+    SELECT id, user_code
+    FROM users
+    WHERE id = $1
+    LIMIT 1
+    `,
+    [rootUserId]
+  );
+
+  const root = rootRes.rows[0];
+  if (!root) return 0;
+
+  const params = [String(root.id), String(root.user_code)];
+  const excludeClause = excludeBuyerId !== null && excludeBuyerId !== undefined
+    ? "AND up.user_id <> $3"
+    : "";
+
+  if (excludeBuyerId !== null && excludeBuyerId !== undefined) {
+    params.push(excludeBuyerId);
+  }
+
+  const result = await client.query(
+    `
+    WITH RECURSIVE downline AS (
+      SELECT u.id, u.user_code
+      FROM users u
+      WHERE u.referred_by::text = $1
+         OR u.referred_by::text = $2
+
+      UNION
+
+      SELECT c.id, c.user_code
+      FROM users c
+      JOIN downline d
+        ON c.referred_by::text = d.id::text
+        OR c.referred_by::text = d.user_code
+    )
+    SELECT COALESCE(SUM(up.amount), 0) AS total
+    FROM downline d
+    JOIN user_plans up ON up.user_id = d.id
+    ${excludeClause}
+    `,
+    params
+  );
+
+  return Number(result.rows[0]?.total || 0);
+};
+
+const syncUnlockedLevels = async (client, receiverUserId, qualifyingRootId) => {
+  const levelConfigs = await getActiveLevelConfigs(client);
+  const branchBusiness = await getBranchBusinessTotal(client, qualifyingRootId);
+
+  for (const config of levelConfigs) {
+    if (config.level <= 1) continue;
+
+    const required = await getLevelUnlockRequirement(client, config.level);
+    if (!required) continue;
+
+    if (branchBusiness >= required) {
+      await client.query(
+        `
+        INSERT INTO user_level_unlocks (user_id, level, unlocked_at)
+        VALUES ($1, $2, NOW())
+        ON CONFLICT (user_id, level) DO NOTHING
+        `,
+        [receiverUserId, config.level]
+      );
+    }
+  }
+};
+
 export const creditLevelIncome = async ({
   buyerId,
   planAmount,
@@ -87,7 +176,8 @@ export const creditLevelIncome = async ({
       return;
     }
 
-    // Build upline chain: direct parent -> grand parent -> next
+    // Build upline chain:
+    // buyer -> level 1 parent -> level 2 parent -> level 3 parent ...
     const uplineChain = [];
     let current = buyerId;
 
@@ -95,24 +185,48 @@ export const creditLevelIncome = async ({
       const parentId = await getUplineUserId(client, current);
       if (!parentId) break;
 
-      if (uplineChain.includes(parentId)) break; // safety for loops
+      if (uplineChain.includes(parentId)) break; // safety
       uplineChain.push(parentId);
       current = parentId;
     }
 
+    // Pay income only if the qualifying branch already reached threshold
+    // BEFORE this current purchase.
     for (let i = 0; i < uplineChain.length; i++) {
       const receiverId = uplineChain[i];
       const level = i + 1;
 
-      const config = levelConfigs.find(
-        (l) => Number(l.level) === level
-      );
-
+      const config = levelConfigs.find((l) => Number(l.level) === level);
       if (!config) continue;
 
-      // Only pay users who have a plan
       const receiverPlanId = await getReceiverPlanId(client, receiverId);
       if (!receiverPlanId) continue;
+
+      if (level > 1) {
+        const required = await getLevelUnlockRequirement(client, level);
+        if (!required) continue;
+
+        // IMPORTANT:
+        // For level 2 income, the unlock comes from the branch below the
+        // direct parent in the chain.
+        //
+        // Example:
+        // buyer -> user1 -> Muthu
+        // Muthu's level 2 unlock is based on user1's downline business.
+        const qualifyingRootId = uplineChain[i - 1];
+
+        // Exclude the current buyer so the purchase that reaches the threshold
+        // does NOT get level 2 income.
+        const businessBeforeThisPurchase = await getBranchBusinessTotal(
+          client,
+          qualifyingRootId,
+          buyerId
+        );
+
+        if (businessBeforeThisPurchase < required) {
+          continue;
+        }
+      }
 
       const percentage = Number(config.percentage);
       const incomeAmount = Number(((amount * percentage) / 100).toFixed(2));
@@ -120,19 +234,28 @@ export const creditLevelIncome = async ({
       if (incomeAmount <= 0) continue;
 
       await client.query(
-        `INSERT INTO level_income
+        `
+        INSERT INTO level_income
           (user_id, from_user_id, user_plan_id, credited_user_plan_id, level, amount, percentage, income_type, created_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,'level',NOW())`,
+        VALUES ($1, $2, $3, $4, $5, $6, $7, 'level', NOW())
+        `,
         [
-          receiverId,      // who earns
-          buyerId,         // who generated the income
-          userPlanId,      // buyer's plan
-          receiverPlanId,  // receiver's own plan
+          receiverId,
+          buyerId,
+          userPlanId,
+          receiverPlanId,
           level,
           incomeAmount,
           percentage,
         ]
       );
+    }
+
+    // Update unlock status after the current purchase is processed.
+    for (let i = 1; i < uplineChain.length; i++) {
+      const receiverId = uplineChain[i];
+      const qualifyingRootId = uplineChain[i - 1];
+      await syncUnlockedLevels(client, receiverId, qualifyingRootId);
     }
 
     await client.query("COMMIT");
