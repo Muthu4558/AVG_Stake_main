@@ -114,30 +114,40 @@ export const buyPlan = async (req, res) => {
     }
 
     const numericAmount = Number(amount);
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      return res.status(400).json({ message: "Invalid amount" });
+    }
 
+    // ✅ GET PLAN DETAILS
     const planRes = await pool.query(
       "SELECT * FROM plans WHERE id = $1",
       [planId]
     );
 
     const plan = planRes.rows[0];
+    if (!plan) {
+      return res.status(404).json({ message: "Plan not found" });
+    }
+
+    // ✅ IMPORTANT FIX → GET DAILY ROI FROM PLAN
+    const dailyROI = Number(plan.daily_roi || 0);
 
     await pool.query("BEGIN");
 
+    // ✅ SAVE CORRECT ROI (NOT 0)
     const result = await pool.query(
       `INSERT INTO user_plans
         (user_id, plan_id, amount, daily_roi, status)
        VALUES ($1, $2, $3, $4, 'active')
        RETURNING *`,
-      [userId, planId, numericAmount, 0]
+      [userId, planId, numericAmount, dailyROI]
     );
 
     const insertedPlan = result.rows[0];
 
-    // 🔥 CURRENT USER CODE
+    // ===== REFERRAL LOGIC (UNCHANGED) =====
     const currentUserCode = await getUserCode(userId);
 
-    // 🔥 DIRECT PARENT
     const userRes = await pool.query(
       "SELECT referred_by FROM users WHERE id = $1",
       [userId]
@@ -146,7 +156,6 @@ export const buyPlan = async (req, res) => {
     const directParentCode = userRes.rows[0]?.referred_by;
     const directParentId = await resolveUserId(directParentCode);
 
-    /* ===== DIRECT INCOME ===== */
     if (directParentId) {
       await insertEarning({
         receiverUserId: directParentId,
@@ -161,13 +170,12 @@ export const buyPlan = async (req, res) => {
       });
     }
 
-    // ✅ LEVEL INCOME (DYNAMIC FROM DB)
-await creditLevelIncome({
-  buyerId: userId,
-  planAmount: numericAmount,
-  userPlanId: insertedPlan.id,
-  creditedUserPlanId: insertedPlan.id,
-});
+    await creditLevelIncome({
+      buyerId: userId,
+      planAmount: numericAmount,
+      userPlanId: insertedPlan.id,
+      creditedUserPlanId: insertedPlan.id,
+    });
 
     await pool.query("COMMIT");
 
