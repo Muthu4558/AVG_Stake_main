@@ -30,7 +30,15 @@ const StatCard = ({ title, value, icon }) => {
 const UserDashboard = () => {
   const [isOpen, setIsOpen] = useState(false);
 
+  // ✅ WALLET (AFTER DEDUCTION)
   const [wallet, setWallet] = useState({
+    roi: 0,
+    level: 0,
+    direct: 0,
+  });
+
+  // ✅ EARNINGS (FULL TOTAL)
+  const [earnings, setEarnings] = useState({
     roi: 0,
     level: 0,
     direct: 0,
@@ -58,17 +66,13 @@ const UserDashboard = () => {
         const token = localStorage.getItem("token");
 
         const [
-          roiRes,
           summaryRes,
           withdrawRes,
           referralsRes,
           networkRes,
           depositRes,
-          teamBusinessRes // ✅ NEW API
+          teamBusinessRes,
         ] = await Promise.all([
-          axios.get("http://localhost:5000/api/user-plans/my-total-roi", {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
           axios.get("http://localhost:5000/api/withdrawals/summary", {
             headers: { Authorization: `Bearer ${token}` },
           }),
@@ -89,11 +93,18 @@ const UserDashboard = () => {
           }),
         ]);
 
-        // ✅ WALLET
+        // ✅ WALLET (DEDUCTED)
         setWallet({
-          roi: roiRes.data.roi || 0,
+          roi: summaryRes.data.roi || 0,
           level: summaryRes.data.level || 0,
           direct: summaryRes.data.directReferral || 0,
+        });
+
+        // ✅ EARNINGS (TOTAL)
+        setEarnings({
+          roi: summaryRes.data.roiTotal || 0,
+          level: summaryRes.data.levelTotal || 0,
+          direct: summaryRes.data.directTotal || 0,
         });
 
         // ✅ WITHDRAW STATS
@@ -125,12 +136,11 @@ const UserDashboard = () => {
         // ✅ REFERRALS
         const directCount = referralsRes.data.length;
 
-        // ✅ NETWORK COUNT ONLY (NOT BUSINESS)
+        // ✅ TEAM COUNT
         const calcCount = (node) => {
           if (!node || !node.children) return 0;
 
           let count = node.children.length;
-
           node.children.forEach((child) => {
             count += calcCount(child);
           });
@@ -153,8 +163,6 @@ const UserDashboard = () => {
           todayWithdrawAmount,
           directCount,
           teamCount,
-
-          // 🔥 REAL BUSINESS (FROM BACKEND)
           teamBusiness: teamBusinessRes.data.teamBusiness,
           todayBusiness: teamBusinessRes.data.todayBusiness,
         });
@@ -178,6 +186,7 @@ const UserDashboard = () => {
           <h2 className="page-title">Dashboard</h2>
           <span>Overview of your account activity</span>
 
+          {/* ✅ WALLET BALANCE */}
           <h4 className="section-title">Wallet Balance</h4>
           <div className="grid grid-3">
             <StatCard title="ROI Income" value={`$${wallet.roi}`} icon={<FaChartLine />} />
@@ -185,14 +194,16 @@ const UserDashboard = () => {
             <StatCard title="Direct Income" value={`$${wallet.direct}`} icon={<FaWallet />} />
           </div>
 
+          {/* ✅ EARNINGS (NO DEDUCTION) */}
           <h4 className="section-title">Earnings</h4>
           <div className="grid grid-4">
             <StatCard title="Total Staking" value={`$${stats.staking}`} icon={<FaMoneyBill />} />
-            <StatCard title="ROI Income" value={`$${wallet.roi}`} icon={<FaChartLine />} />
-            <StatCard title="Level Income" value={`$${wallet.level}`} icon={<FaLayerGroup />} />
-            <StatCard title="Direct Income" value={`$${wallet.direct}`} icon={<FaWallet />} />
+            <StatCard title="ROI Income" value={`$${earnings.roi}`} icon={<FaChartLine />} />
+            <StatCard title="Level Income" value={`$${earnings.level}`} icon={<FaLayerGroup />} />
+            <StatCard title="Direct Income" value={`$${earnings.direct}`} icon={<FaWallet />} />
           </div>
 
+          {/* TRANSACTIONS */}
           <h4 className="section-title">Transactions Overview</h4>
           <div className="grid grid-2">
             <div className="box">
@@ -224,6 +235,7 @@ const UserDashboard = () => {
             </div>
           </div>
 
+          {/* TEAM */}
           <h4 className="section-title">Business & Team</h4>
           <div className="grid grid-4">
             <StatCard title="Direct Referrals" value={stats.directCount} icon={<FaUsers />} />

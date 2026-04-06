@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { FaBars, FaTimes } from "react-icons/fa";
 import API from "../../utils/api";
 import { toast } from "react-hot-toast";
-import Logo from "../../assets/logo.png"
+import Logo from "../../assets/logo.png";
 
 const Topbar = ({ isOpen, setIsOpen }) => {
   const navigate = useNavigate();
@@ -14,20 +14,19 @@ const Topbar = ({ isOpen, setIsOpen }) => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [profileRes, roiRes, summaryRes] = await Promise.all([
+        // ✅ ONLY USE SUMMARY (single source of truth)
+        const [profileRes, summaryRes] = await Promise.all([
           API.get("/users/me"),
-          API.get("/user-plans/my-total-roi"),   // ✅ ROI (same as dashboard)
-          API.get("/withdrawals/summary"),       // ✅ Direct + Level
+          API.get("/withdrawals/summary"),
         ]);
 
         setUser(profileRes.data);
 
-        // ✅ GET VALUES
-        const roi = Number(roiRes.data.roi || 0);
+        // ✅ USE NET VALUES ONLY
+        const roi = Number(summaryRes.data.roi || 0);
         const direct = Number(summaryRes.data.directReferral || 0);
         const level = Number(summaryRes.data.level || 0);
 
-        // ✅ TOTAL WALLET
         const totalWallet = roi + direct + level;
 
         setWallet(totalWallet);
@@ -43,14 +42,11 @@ const Topbar = ({ isOpen, setIsOpen }) => {
   }, []);
 
   const handleLogout = () => {
-    // 🔥 Clear auth data
     localStorage.removeItem("token");
     localStorage.removeItem("role");
 
-    // ✅ Show toast
     toast.success("Logged out successfully 👋");
 
-    // ⏳ Small delay so user sees toast
     setTimeout(() => {
       navigate("/");
     }, 800);
@@ -61,7 +57,6 @@ const Topbar = ({ isOpen, setIsOpen }) => {
 
       {/* LEFT */}
       <div className="utb-left">
-
         <div className="ut-brand">
           <img src={Logo} width={40} alt="logo" />
           <h2 className="utb-app-name">AVG</h2>
@@ -71,7 +66,6 @@ const Topbar = ({ isOpen, setIsOpen }) => {
       {/* RIGHT */}
       <div className="utb-right">
 
-        {/* USER INFO */}
         <div className="utb-user-info">
           {loading ? (
             <p>Loading...</p>
@@ -80,10 +74,12 @@ const Topbar = ({ isOpen, setIsOpen }) => {
               <p className="utb-username">
                 {user?.name || "User"}
               </p>
+
               <p className="utb-referral">
                 Referral Code: {user?.user_code || "N/A"}
               </p>
 
+              {/* ✅ CORRECT WALLET */}
               <p className="utb-wallet">
                 Wallet Balance: ${wallet.toFixed(2)}
               </p>
