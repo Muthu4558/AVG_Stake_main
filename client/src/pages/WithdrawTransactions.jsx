@@ -26,15 +26,26 @@ const WithdrawTransactions = () => {
                 }
             );
 
-            const formatted = (res.data || []).map((d) => ({
-                id: d.id,
-                user: `${d.user} (${d.user_code})`,
-                wallet: d.wallet_type,
-                amount: `₹${Number(d.amount).toFixed(2)}`,
-                proof: d.transaction_proof || "-",
-                status: d.status,
-                created: new Date(d.created_at).toLocaleString()
-            }));
+            const formatted = (res.data || []).map((d) => {
+                const amount = Number(d.amount);
+
+                const fee = amount * 0.10;        // 10%
+                const approved = amount * 95;     // your logic
+
+                return {
+                    id: d.id,
+                    user: `${d.name} ${d.lastname} (${d.user_code})`,
+                    wallet: d.wallet_type,
+                    amount,
+                    amountDisplay: `$${amount.toFixed(2)}`,
+                    fee: fee.toFixed(2),
+                    approved: approved.toFixed(2),
+                     currency: d.currency_type || "USD",
+
+                    status: d.status,
+                    created: new Date(d.created_at).toLocaleString()
+                };
+            });
 
             setData(formatted);
 
@@ -51,8 +62,7 @@ const WithdrawTransactions = () => {
     const filtered = useMemo(() => {
         return data.filter(d =>
             d.user.toLowerCase().includes(search.toLowerCase()) ||
-            d.wallet.toLowerCase().includes(search.toLowerCase()) ||
-            d.proof.toLowerCase().includes(search.toLowerCase())
+            d.wallet.toLowerCase().includes(search.toLowerCase())
         );
     }, [search, data]);
 
@@ -176,6 +186,7 @@ const WithdrawTransactions = () => {
 
                                     {menu === d.id && (
                                         <div className="action-dropdown">
+                                            <div onClick={() => setEditData(d)}>Edit</div>
 
                                             <div onClick={() => setViewData(d)}>View</div>
 
@@ -203,47 +214,127 @@ const WithdrawTransactions = () => {
             </div>
 
             {/* PAGINATION */}
-                <div className="pagination">
+            <div className="pagination">
 
-                    <div className="usrDeposit__rows">
-                        Rows per page
-                        <select
-                            value={rows}
-                            onChange={(e) => {
-                                setRows(Number(e.target.value));
-                                setPage(1);
-                            }}
-                        >
-                            <option value={5}>5</option>
-                            <option value={10}>10</option>
-                        </select>
+                <div className="usrDeposit__rows">
+                    Rows per page
+                    <select
+                        value={rows}
+                        onChange={(e) => {
+                            setRows(Number(e.target.value));
+                            setPage(1);
+                        }}
+                    >
+                        <option value={5}>5</option>
+                        <option value={10}>10</option>
+                    </select>
 
-                        {/* <span style={{ marginLeft: "10px" }}>
+                    {/* <span style={{ marginLeft: "10px" }}>
                             {(page - 1) * rows + 1}-{Math.min(page * rows, filtered.length)} of {filtered.length}
                         </span> */}
-                    </div>
-
-                    <div>
-                        <button disabled={page === 1} onClick={() => setPage(page - 1)}>
-                            Previous
-                        </button>
-
-                        {[...Array(totalPages)].map((_, i) => (
-                            <button
-                                key={i}
-                                className={page === i + 1 ? "active" : ""}
-                                onClick={() => setPage(i + 1)}
-                            >
-                                {i + 1}
-                            </button>
-                        ))}
-
-                        <button disabled={page === totalPages} onClick={() => setPage(page + 1)}>
-                            Next
-                        </button>
-                    </div>
-
                 </div>
+
+                <div>
+                    <button disabled={page === 1} onClick={() => setPage(page - 1)}>
+                        Previous
+                    </button>
+
+                    {[...Array(totalPages)].map((_, i) => (
+                        <button
+                            key={i}
+                            className={page === i + 1 ? "active" : ""}
+                            onClick={() => setPage(i + 1)}
+                        >
+                            {i + 1}
+                        </button>
+                    ))}
+
+                    <button disabled={page === totalPages} onClick={() => setPage(page + 1)}>
+                        Next
+                    </button>
+                </div>
+
+            </div>
+
+            {editData && (
+                <div className="wd-modal-overlay">
+                    <div className="wd-modal">
+
+                        {/* HEADER */}
+                        <div className="wd-header">
+                            <h2>Edit Withdraw</h2>
+                            <button onClick={() => setEditData(null)}>✕</button>
+                        </div>
+
+                        {/* BODY */}
+                        <div className="wd-body">
+
+                            {/* LEFT */}
+                            <div className="wd-box">
+                                <h4>To Details</h4>
+
+                                <div className="wd-row">
+                                    <span>User</span>
+                                    <b>{editData.user || "-"}</b>
+                                </div>
+
+                                <div className="wd-row">
+                                    <span>Wallet</span>
+                                    <b>{editData.wallet || "-"}</b>
+                                </div>
+                            </div>
+
+                            {/* RIGHT */}
+                           
+
+                            {/* FULL WIDTH */}
+                            <div className="wd-box wd-full">
+
+                                <h4>Transaction Details</h4>
+
+                                <div className="wd-grid">
+
+                                    <div>
+                                        <span>Currency</span>
+                                        <b>{editData.currency}</b>
+                                    </div>
+
+                                    <div>
+                                        <span>Request</span>
+                                        <b>${editData.amount?.toFixed(2)}</b>
+                                    </div>
+
+                                    <div>
+                                        <span>Fee (10%)</span>
+                                        <b>${editData.fee}</b>
+                                    </div>
+
+                                    <div>
+                                        <span>Approved</span>
+                                        <b>₹{editData.approved}</b>
+                                    </div>
+
+                                    <div>
+                                        <span>Status</span>
+                                        <b className={`wd-status ${editData.status}`}>
+                                            {editData.status}
+                                        </b>
+                                    </div>
+
+                                    <div>
+                                        <span>Created</span>
+                                        <b>{editData.created}</b>
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+                </div>
+            )}
 
             {/* VIEW MODAL */}
             {viewData && (

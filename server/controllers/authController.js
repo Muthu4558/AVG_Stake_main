@@ -86,15 +86,14 @@ export const verifySignupOtp = async (req, res) => {
       return res.status(400).json({ message: "Signup not found" });
     }
 
+    // ⛔ OTP expired
     if (new Date(pending.expires_at).getTime() < Date.now()) {
-      await client.query("DELETE FROM pending_signups WHERE id = $1", [
-        signupId,
-      ]);
+      await client.query("DELETE FROM pending_signups WHERE id = $1", [signupId]);
       return res.status(400).json({ message: "OTP expired" });
     }
 
+    // ⛔ invalid OTP
     const isMatch = await bcrypt.compare(String(otp), pending.otp_hash);
-
     if (!isMatch) {
       return res.status(400).json({ message: "Invalid OTP" });
     }
@@ -106,6 +105,7 @@ export const verifySignupOtp = async (req, res) => {
 
     let sponsor = null;
 
+    // 🔍 FIND SPONSOR
     if (referralCode) {
       const refUser = await client.query(
         "SELECT id, user_code FROM users WHERE user_code = $1",
@@ -120,10 +120,12 @@ export const verifySignupOtp = async (req, res) => {
       sponsor = refUser.rows[0];
     }
 
+    // 🔐 PASSWORD HASH
     const hashedPassword = await bcrypt.hash(password, 10);
+
     const user_code = generateUserCode();
 
-    // ✅ NO email uniqueness restriction
+    // ✅ CREATE USER
     const user = await createUser(
       {
         user_code,
@@ -138,14 +140,23 @@ export const verifySignupOtp = async (req, res) => {
       client
     );
 
+    // 🔥 MAIN FIX: INSERT INTO referrals TABLE
     if (sponsor) {
+      // (optional) keep your old tree logic
       await createReferralChain(client, user.user_code, sponsor.user_code);
+
+      // ✅ IMPORTANT INSERT (this was missing)
+      await client.query(
+        `
+        INSERT INTO referrals (referrer_user_id, referred_user_id, level)
+        VALUES ($1, $2, 1)
+        `,
+        [sponsor.id, user.id]
+      );
     }
 
-    // delete only this signup request
-    await client.query("DELETE FROM pending_signups WHERE id = $1", [
-      signupId,
-    ]);
+    // 🧹 CLEANUP
+    await client.query("DELETE FROM pending_signups WHERE id = $1", [signupId]);
 
     await client.query("COMMIT");
 
@@ -153,6 +164,7 @@ export const verifySignupOtp = async (req, res) => {
       message: "Account verified and created successfully",
       user_code: user.user_code,
     });
+
   } catch (error) {
     await client.query("ROLLBACK");
     console.error("Verify OTP error:", error);

@@ -26,6 +26,41 @@ const parseNumber = (val) => {
   return parseFloat(num) || 0;
 };
 
+// 🔥 ROBUST DATE PARSER (FIXED BUG)
+const parseDate = (val) => {
+  if (!val) return new Date();
+
+  try {
+    // ✅ Case 1: Excel serial number
+    if (typeof val === "number") {
+      return new Date((val - 25569) * 86400 * 1000);
+    }
+
+    // ✅ Case 2: String formats
+    const formats = [
+      "DD-MM-YYYY",
+      "D-M-YYYY",
+      "DD/MM/YYYY",
+      "D/M/YYYY",
+      "YYYY-MM-DD",
+      "DD-MM-YYYY HH:mm:ss",
+      "DD/MM/YYYY HH:mm:ss",
+    ];
+
+    const m = moment(val, formats, true);
+
+    if (!m.isValid()) {
+      console.log("⚠️ Invalid date format:", val);
+      return new Date(); // fallback
+    }
+
+    return m.toDate();
+  } catch (err) {
+    console.log("❌ Date parse error:", val);
+    return new Date();
+  }
+};
+
 const importUserPlans = async () => {
   const client = await pool.connect();
 
@@ -43,68 +78,80 @@ const importUserPlans = async () => {
     let skipped = 0;
 
     for (let i = 1; i < data.length; i++) {
-      const row = data[i];
+      try {
+        const row = data[i];
 
-      const userCode = clean(row[1]); // ✅ user_id column contains user_code
-      const planId = Number(row[2]);
-      const amount = parseNumber(row[3]);
-      const dailyROI = parseNumber(row[4]);
-      const status = (row[5] || "active").toString().toLowerCase();
+        const userCode = clean(row[1]);
+        const planId = Number(row[2]);
+        const amount = parseNumber(row[3]);
+        const dailyROI = parseNumber(row[4]);
+        const status = (row[5] || "active").toString().toLowerCase();
 
-      const createdAt = row[6]
-        ? moment(row[6], ["D/M/YYYY, h:mm:ss a", moment.ISO_8601], true).toDate()
-        : new Date();
+        const createdAt = parseDate(row[6]);
 
-      if (!userCode) {
-        console.log(`❌ No user_code at row ${i}`);
+        // ❌ VALIDATIONS
+        if (!userCode) {
+          console.log(`❌ No user_code at row ${i}`);
+          skipped++;
+          continue;
+        }
+
+        if (!planId || !amount) {
+          console.log(`❌ Invalid plan/amount at row ${i}`);
+          skipped++;
+          continue;
+        }
+
+        if (isNaN(createdAt.getTime())) {
+          console.log(`❌ Invalid date at row ${i}:`, row[6]);
+          skipped++;
+          continue;
+        }
+
+        // 🔍 GET USER ID
+        const userRes = await client.query(
+          "SELECT id FROM users WHERE user_code = $1",
+          [userCode]
+        );
+
+        if (!userRes.rows.length) {
+          console.log(`❌ User not found: ${userCode}`);
+          skipped++;
+          continue;
+        }
+
+        const userId = userRes.rows[0].id;
+
+        // ✅ INSERT
+        await client.query(
+          `INSERT INTO user_plans 
+          (user_id, plan_id, amount, daily_roi, status, created_at)
+          VALUES ($1,$2,$3,$4,$5,$6)`,
+          [userId, planId, amount, dailyROI, status, createdAt]
+        );
+
+        inserted++;
+        console.log(`✅ Inserted: ${userCode}`);
+
+      } catch (rowError) {
+        console.log(`❌ Error at row ${i}:`, rowError.message);
         skipped++;
-        continue;
       }
-
-      // 🔥 CONVERT user_code → user_id
-      const userRes = await client.query(
-        "SELECT id FROM users WHERE user_code = $1",
-        [userCode]
-      );
-
-      if (!userRes.rows.length) {
-        console.log(`❌ User not found: ${userCode}`);
-        skipped++;
-        continue;
-      }
-
-      const userId = userRes.rows[0].id;
-
-      if (!planId || !amount) {
-        console.log(`❌ Invalid plan/amount at row ${i}`);
-        skipped++;
-        continue;
-      }
-
-      // ✅ INSERT DIRECTLY (daily_roi already given)
-      await client.query(
-        `INSERT INTO user_plans 
-        (user_id, plan_id, amount, daily_roi, status, created_at)
-        VALUES ($1,$2,$3,$4,$5,$6)`,
-        [userId, planId, amount, dailyROI, status, createdAt]
-      );
-
-      inserted++;
-      console.log(`✅ Inserted: ${userCode}`);
     }
 
     await client.query("COMMIT");
 
-    console.log("🎉 DONE");
+    console.log("\n🎉 IMPORT COMPLETED");
     console.log(`✅ Inserted: ${inserted}`);
     console.log(`⚠️ Skipped: ${skipped}`);
 
   } catch (err) {
     await client.query("ROLLBACK");
-    console.error("❌ Import failed");
+    console.error("\n❌ Import failed (rolled back)");
     console.error(err);
   } finally {
     client.release();
+    process.exit();
   }
 };
 

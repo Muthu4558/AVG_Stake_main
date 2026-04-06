@@ -165,7 +165,7 @@ const MyReferral = () => {
                       </td>
                       <td>{item.lastname}</td>
                       <td>{item.phone}</td>
-                      <td>Level 1</td> {/* Static for now */}
+                      <td>Level {item.level}</td> {/* Static for now */}
                       <td>{formatDate(item.created_at)}</td>
                     </tr>
                   ))

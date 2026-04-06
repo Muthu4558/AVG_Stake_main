@@ -103,17 +103,13 @@ export const getAllWithdrawals = async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT 
-        w.id,
-        u.name || ' ' || COALESCE(u.lastname,'') AS user,
-        u.user_code,
-        w.wallet_type,
-        w.amount,
-        w.transaction_proof,
-        w.status,
-        w.created_at
-      FROM withdrawals w
-      JOIN users u ON u.id = w.user_id
-      ORDER BY w.id DESC
+  w.*,
+  u.name,
+  u.lastname,
+  u.user_code
+FROM withdrawals w
+JOIN users u ON u.id = w.user_id
+ORDER BY w.id DESC;
     `);
 
     res.json(result.rows);

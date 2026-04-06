@@ -187,9 +187,9 @@ export const getAllReferrals = async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT
-        rt.id,
-        rt.level,
-        rt.created_at,
+        r.id,
+        r.level,
+        r.created_at,
 
         ref.name AS referrer_name,
         ref.lastname AS referrer_lastname,
@@ -201,10 +201,11 @@ export const getAllReferrals = async (req, res) => {
         des.phone AS referred_phone,
         des.user_code AS referred_code
 
-      FROM referral_tree rt
-      JOIN users ref ON ref.user_code = rt.ancestor_user_code
-      JOIN users des ON des.user_code = rt.descendant_user_code
-      ORDER BY rt.created_at DESC
+      FROM referrals r
+      JOIN users ref ON ref.id = r.referrer_user_id
+      JOIN users des ON des.id = r.referred_user_id
+
+      ORDER BY r.created_at DESC
     `);
 
     res.json(result.rows);
@@ -482,37 +483,23 @@ export const getMyReferrals = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    const me = await pool.query(
-      `SELECT user_code FROM users WHERE id = $1`,
-      [userId]
-    );
-
-    if (!me.rows[0]) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    const myCode = me.rows[0].user_code;
-
-    const result = await pool.query(
-      `
-      SELECT
-        rt.id,
+    const result = await pool.query(`
+      SELECT 
+        r.id,
         u.name AS username,
         u.lastname,
         u.phone,
         u.user_code,
-        rt.level,
-        rt.created_at
-      FROM referral_tree rt
-      JOIN users u ON u.user_code = rt.descendant_user_code
-      WHERE rt.ancestor_user_code = $1
-        AND rt.level = 1
-      ORDER BY rt.created_at DESC
-      `,
-      [myCode]
-    );
+        r.level,
+        r.created_at
+      FROM referrals r
+      JOIN users u ON u.id = r.referred_user_id
+      WHERE r.referrer_user_id = $1
+      ORDER BY r.created_at DESC
+    `, [userId]);
 
     res.json(result.rows);
+
   } catch (err) {
     console.error("getMyReferrals error:", err);
     res.status(500).json({ error: err.message });
@@ -524,40 +511,7 @@ export const getMyNetwork = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    const getWallet = async (uid) => {
-      const result = await pool.query(
-        `
-        SELECT 
-          COALESCE(roi.total,0) AS roi,
-          COALESCE(direct.total,0) AS direct,
-          COALESCE(level.total,0) AS level
-        FROM users u
-        LEFT JOIN (
-          SELECT user_id, SUM(total_earned) AS total
-          FROM roi_transactions
-          GROUP BY user_id
-        ) roi ON roi.user_id = u.id
-        LEFT JOIN (
-          SELECT user_id, SUM(amount) AS total
-          FROM level_income
-          WHERE income_type IN ('direct','plan_direct')
-          GROUP BY user_id
-        ) direct ON direct.user_id = u.id
-        LEFT JOIN (
-          SELECT user_id, SUM(amount) AS total
-          FROM level_income
-          WHERE income_type = 'level'
-          GROUP BY user_id
-        ) level ON level.user_id = u.id
-        WHERE u.id = $1
-        `,
-        [uid]
-      );
-
-      const row = result.rows[0];
-      return Number(row.roi) + Number(row.direct) + Number(row.level);
-    };
-
+    // 🔹 get root user
     const rootRes = await pool.query(
       `SELECT id, name, lastname, user_code FROM users WHERE id=$1`,
       [userId]
@@ -565,18 +519,30 @@ export const getMyNetwork = async (req, res) => {
 
     const rootUser = rootRes.rows[0];
 
-    const buildTree = async (parentCode) => {
-      const result = await pool.query(
-        `
+    if (!rootUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // 🔹 wallet calc (same as before)
+    const getWallet = async (uid) => {
+      const result = await pool.query(`
+        SELECT 
+          COALESCE(SUM(total_earned),0) AS roi
+        FROM roi_transactions
+        WHERE user_id = $1
+      `, [uid]);
+
+      return Number(result.rows[0].roi || 0);
+    };
+
+    // 🔥 recursive build using referrals table
+    const buildTree = async (parentId) => {
+      const result = await pool.query(`
         SELECT u.id, u.name, u.lastname, u.user_code
-        FROM referral_tree rt
-        JOIN users u ON u.user_code = rt.descendant_user_code
-        WHERE rt.ancestor_user_code = $1
-          AND rt.level = 1
-        ORDER BY u.id ASC
-        `,
-        [parentCode]
-      );
+        FROM referrals r
+        JOIN users u ON u.id = r.referred_user_id
+        WHERE r.referrer_user_id = $1
+      `, [parentId]);
 
       return Promise.all(
         result.rows.map(async (child) => ({
@@ -585,7 +551,7 @@ export const getMyNetwork = async (req, res) => {
           id: child.id,
           user_code: child.user_code,
           wallet: await getWallet(child.id),
-          children: await buildTree(child.user_code),
+          children: await buildTree(child.id),
         }))
       );
     };
@@ -596,10 +562,11 @@ export const getMyNetwork = async (req, res) => {
       id: rootUser.id,
       user_code: rootUser.user_code,
       wallet: await getWallet(userId),
-      children: await buildTree(rootUser.user_code),
+      children: await buildTree(userId),
     };
 
     res.json(tree);
+
   } catch (err) {
     console.error("getMyNetwork error:", err);
     res.status(500).json({ error: err.message });

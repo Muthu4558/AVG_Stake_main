@@ -50,7 +50,7 @@ const UserWithdraw = () => {
         currency: w.currency_type,
         proof: w.transaction_proof || "-",
         request: `$${Number(w.amount).toFixed(2)}`,
-        approved: `$${Number(w.approved_amount).toFixed(2)}`,
+        approved: `₹${Number(w.approved_amount).toFixed(2)}`,
         status: w.status,
         date: w.created_at,
       }));
