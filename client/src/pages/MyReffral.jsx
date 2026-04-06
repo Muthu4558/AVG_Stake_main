@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Sidebar from "../components/user/UserSidebar";
 import Topbar from "../components/user/UserTopbar";
 import axios from "axios";
@@ -20,6 +20,10 @@ const MyReferral = () => {
 
   const [data, setData] = useState([]);
 
+  // pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
   const API = "http://localhost:5000/api/users";
 
   // ================= FETCH =================
@@ -31,8 +35,7 @@ const MyReferral = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      setData(res.data);
-
+      setData(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error(err);
       toast.error("Failed to load referrals");
@@ -43,24 +46,120 @@ const MyReferral = () => {
     fetchReferrals();
   }, []);
 
+  // reset page when filters/search/rows change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, filters.startDate, filters.endDate, rowsPerPage, dateRange]);
+
+  const getDateRange = (label) => {
+    const today = new Date();
+    const end = new Date(today);
+    const start = new Date(today);
+
+    start.setHours(0, 0, 0, 0);
+    end.setHours(23, 59, 59, 999);
+
+    if (label === "Today") {
+      return {
+        startDate: start.toISOString().split("T")[0],
+        endDate: end.toISOString().split("T")[0],
+      };
+    }
+
+    if (label === "Last 7 Days") {
+      const from = new Date(today);
+      from.setDate(from.getDate() - 6);
+      from.setHours(0, 0, 0, 0);
+      return {
+        startDate: from.toISOString().split("T")[0],
+        endDate: end.toISOString().split("T")[0],
+      };
+    }
+
+    if (label === "1 Month") {
+      const from = new Date(today);
+      from.setMonth(from.getMonth() - 1);
+      from.setHours(0, 0, 0, 0);
+      return {
+        startDate: from.toISOString().split("T")[0],
+        endDate: end.toISOString().split("T")[0],
+      };
+    }
+
+    if (label === "3 Months") {
+      const from = new Date(today);
+      from.setMonth(from.getMonth() - 3);
+      from.setHours(0, 0, 0, 0);
+      return {
+        startDate: from.toISOString().split("T")[0],
+        endDate: end.toISOString().split("T")[0],
+      };
+    }
+
+    return { startDate: "", endDate: "" };
+  };
+
   // ================= FILTER + SEARCH =================
-  const filteredData = data.filter((item) => {
-    const matchSearch =
-      (item.username || "").toLowerCase().includes(search.toLowerCase()) ||
-      (item.phone || "").toLowerCase().includes(search.toLowerCase());
+  const filteredData = useMemo(() => {
+    return data.filter((item) => {
+      const username = (item.username || "").toLowerCase();
+      const phone = (item.phone || "").toLowerCase();
+      const userCode = (item.user_code || "").toLowerCase();
+      const searchValue = search.toLowerCase();
 
-    const createdDate = new Date(item.created_at);
+      const matchSearch =
+        username.includes(searchValue) ||
+        phone.includes(searchValue) ||
+        userCode.includes(searchValue);
 
-    const matchStart =
-      !filters.startDate ||
-      createdDate >= new Date(filters.startDate);
+      const createdAt = item.created_at ? new Date(item.created_at) : null;
 
-    const matchEnd =
-      !filters.endDate ||
-      createdDate <= new Date(filters.endDate);
+      const matchStart =
+        !filters.startDate || (createdAt && createdAt >= new Date(filters.startDate));
+      const matchEnd =
+        !filters.endDate || (createdAt && createdAt <= new Date(filters.endDate));
 
-    return matchSearch && matchStart && matchEnd;
-  });
+      return matchSearch && matchStart && matchEnd;
+    });
+  }, [data, search, filters.startDate, filters.endDate]);
+
+  // ================= PAGINATION =================
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / rowsPerPage));
+
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    return filteredData.slice(startIndex, startIndex + rowsPerPage);
+  }, [filteredData, currentPage, rowsPerPage]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const getVisiblePages = () => {
+    const pages = [];
+    const maxVisible = 5;
+
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+      return pages;
+    }
+
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(totalPages, currentPage + 2);
+
+    if (currentPage <= 3) {
+      startPage = 1;
+      endPage = 5;
+    } else if (currentPage >= totalPages - 2) {
+      startPage = totalPages - 4;
+      endPage = totalPages;
+    }
+
+    for (let i = startPage; i <= endPage; i++) pages.push(i);
+    return pages;
+  };
 
   // ================= DATE FORMAT =================
   const formatDate = (date) => {
@@ -68,22 +167,38 @@ const MyReferral = () => {
     return new Date(date).toLocaleDateString();
   };
 
+  const handleDateRangeChange = (item) => {
+    setDateRange(item);
+    const { startDate, endDate } = getDateRange(item);
+    setFilters((prev) => ({
+      ...prev,
+      startDate,
+      endDate,
+    }));
+    setDropdownOpen(false);
+  };
+
+  const handlePrev = () => {
+    setCurrentPage((prev) => Math.max(1, prev - 1));
+  };
+
+  const handleNext = () => {
+    setCurrentPage((prev) => Math.min(totalPages, prev + 1));
+  };
+
   return (
     <div className="refLayout">
-
       <Sidebar isOpen={isOpen} setIsOpen={setIsOpen} />
 
       <div className="main">
         <Topbar isOpen={isOpen} setIsOpen={setIsOpen} />
 
         <div className="refContent">
-
           {/* HEADER */}
           <div className="refHeader">
             <h2>My Referrals</h2>
 
             <div className="refActions">
-
               {/* DATE RANGE */}
               <div className="refDropdown">
                 <div
@@ -100,10 +215,7 @@ const MyReferral = () => {
                       <div
                         key={item}
                         className={`refDropdownItem ${dateRange === item ? "active" : ""}`}
-                        onClick={() => {
-                          setDateRange(item);
-                          setDropdownOpen(false);
-                        }}
+                        onClick={() => handleDateRangeChange(item)}
                       >
                         {item}
                       </div>
@@ -118,7 +230,6 @@ const MyReferral = () => {
               >
                 Filter
               </button>
-
             </div>
           </div>
 
@@ -147,25 +258,25 @@ const MyReferral = () => {
               </thead>
 
               <tbody>
-                {filteredData.length === 0 ? (
+                {paginatedData.length === 0 ? (
                   <tr>
-                    <td colSpan="5" className="refEmpty">
+                    <td colSpan="6" className="refEmpty">
                       No available options
                     </td>
                   </tr>
                 ) : (
-                  filteredData.map((item, index) => (
+                  paginatedData.map((item, index) => (
                     <tr key={item.id}>
-                      <td>{index + 1}</td>
+                      <td>{(currentPage - 1) * rowsPerPage + index + 1}</td>
                       <td>
                         <div style={{ display: "flex", flexDirection: "column" }}>
                           <span>{item.username}</span>
                           <small style={{ color: "#aaa" }}>{item.user_code}</small>
                         </div>
                       </td>
-                      <td>{item.lastname}</td>
-                      <td>{item.phone}</td>
-                      <td>Level {item.level}</td> {/* Static for now */}
+                      <td>{item.lastname || "-"}</td>
+                      <td>{item.phone || "-"}</td>
+                      <td>Level {item.level || "-"}</td>
                       <td>{formatDate(item.created_at)}</td>
                     </tr>
                   ))
@@ -178,19 +289,36 @@ const MyReferral = () => {
           <div className="usrDeposit__footer">
             <div className="usrDeposit__rows">
               Rows:
-              <select>
-                <option>10</option>
-                <option>25</option>
+              <select
+                value={rowsPerPage}
+                onChange={(e) => setRowsPerPage(Number(e.target.value))}
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
               </select>
             </div>
 
             <div className="usrDeposit__pagination">
-              <button>{"< Prev"}</button>
-              <button className="active">1</button>
-              <button>{"Next >"}</button>
+              <button onClick={handlePrev} disabled={currentPage === 1}>
+                {"< Prev"}
+              </button>
+
+              {getVisiblePages().map((page) => (
+                <button
+                  key={page}
+                  className={currentPage === page ? "active" : ""}
+                  onClick={() => setCurrentPage(page)}
+                >
+                  {page}
+                </button>
+              ))}
+
+              <button onClick={handleNext} disabled={currentPage === totalPages}>
+                {"Next >"}
+              </button>
             </div>
           </div>
-
         </div>
       </div>
 
@@ -198,14 +326,12 @@ const MyReferral = () => {
       {showFilter && (
         <div className="refModalOverlay">
           <div className="refModal">
-
             <div className="refModalHeader">
               <h3>Filter Referrals</h3>
               <button onClick={() => setShowFilter(false)}>✕</button>
             </div>
 
             <div className="refModalBody">
-
               <div className="refField">
                 <label>Start Date</label>
                 <input
@@ -239,7 +365,6 @@ const MyReferral = () => {
                   }
                 />
               </div>
-
             </div>
 
             <div className="refModalFooter">
@@ -257,11 +382,9 @@ const MyReferral = () => {
                 Apply Filter
               </button>
             </div>
-
           </div>
         </div>
       )}
-
     </div>
   );
 };

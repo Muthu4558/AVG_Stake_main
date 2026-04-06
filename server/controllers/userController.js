@@ -968,30 +968,46 @@ export const getMyTeamBusiness = async (req, res) => {
 
     const result = await pool.query(
       `
-      WITH RECURSIVE team AS (
-        SELECT id, user_code
+      WITH RECURSIVE team(id) AS (
+
+        -- ✅ ROOT (force bigint)
+        SELECT id::bigint
         FROM users
         WHERE id = $1
 
         UNION ALL
 
-        SELECT u.id, u.user_code
-        FROM users u
-        JOIN team t ON u.referred_by = t.user_code
+        -- ✅ CHILDREN (already bigint, but keep consistent)
+        SELECT r.referred_user_id::bigint
+        FROM referrals r
+        JOIN team t ON t.id = r.referrer_user_id::bigint
+
       )
-      SELECT 
-        COALESCE(SUM(amount),0) AS total_business,
-        COALESCE(SUM(amount) FILTER (WHERE DATE(created_at)=CURRENT_DATE),0) AS today_business
-      FROM user_plans
-      WHERE user_id IN (SELECT id FROM team)
+
+      SELECT
+        COALESCE(SUM(up.amount), 0) AS total_business,
+
+        COALESCE(
+          SUM(up.amount) FILTER (
+            WHERE DATE(up.created_at) = CURRENT_DATE
+          ),
+          0
+        ) AS today_business
+
+      FROM user_plans up
+
+      WHERE up.user_id IN (
+        SELECT DISTINCT id FROM team WHERE id <> $1
+      )
       `,
       [userId]
     );
 
     res.json({
-      teamBusiness: Number(result.rows[0].total_business),
-      todayBusiness: Number(result.rows[0].today_business),
+      teamBusiness: Number(result.rows[0].total_business || 0),
+      todayBusiness: Number(result.rows[0].today_business || 0),
     });
+
   } catch (err) {
     console.error("getMyTeamBusiness error:", err);
     res.status(500).json({ error: err.message });
