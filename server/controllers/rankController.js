@@ -104,11 +104,9 @@ export const getRanksUser = async (req, res) => {
     if (ranks.length === 0) return res.json([]);
 
     const directRes = await pool.query(
-      `
-      SELECT id, name, lastname, user_code
-      FROM users
-      WHERE referred_by = $1
-    `,
+      `SELECT id, name, lastname, user_code
+       FROM users
+       WHERE referred_by = $1`,
       [userCode]
     );
 
@@ -117,9 +115,7 @@ export const getRanksUser = async (req, res) => {
         `
         WITH RECURSIVE branch AS (
           SELECT id, user_code FROM users WHERE id = $1
-
           UNION ALL
-
           SELECT u.id, u.user_code
           FROM users u
           JOIN branch b ON u.referred_by = b.user_code
@@ -145,6 +141,7 @@ export const getRanksUser = async (req, res) => {
       });
     }
 
+    // 🔥 SORT (VERY IMPORTANT)
     branches.sort((a, b) => b.business - a.business);
 
     const results = [];
@@ -156,28 +153,66 @@ export const getRanksUser = async (req, res) => {
         { percent: 30, amount: rank.target_amount * 0.3 },
       ];
 
-      let branchIndex = 0;
+      const timeline = [];
 
-      const timeline = milestones.map((m) => {
-        const branch = branches[branchIndex];
-
-        if (branch && branch.business >= m.amount) {
-          branchIndex++;
-          return {
-            percent: m.percent,
-            amount: m.amount,
-            achieved: true,
-            by: branch.name,
-          };
-        }
-
-        return {
-          percent: m.percent,
-          amount: m.amount,
+      // 🥇 40% → Top 1
+      const firstLeg = branches[0];
+      if (firstLeg && firstLeg.business >= milestones[0].amount) {
+        timeline.push({
+          percent: 40,
+          amount: milestones[0].amount,
+          achieved: true,
+          by: firstLeg.name,
+        });
+      } else {
+        timeline.push({
+          percent: 40,
+          amount: milestones[0].amount,
           achieved: false,
           by: null,
-        };
-      });
+        });
+      }
+
+      // 🥈 30% → Top 2
+      const secondLeg = branches[1];
+      if (secondLeg && secondLeg.business >= milestones[1].amount) {
+        timeline.push({
+          percent: 30,
+          amount: milestones[1].amount,
+          achieved: true,
+          by: secondLeg.name,
+        });
+      } else {
+        timeline.push({
+          percent: 30,
+          amount: milestones[1].amount,
+          achieved: false,
+          by: null,
+        });
+      }
+
+      // 🥉 30% → Remaining combined
+      const remainingLegs = branches.slice(2);
+      const remainingBusiness = remainingLegs.reduce(
+        (sum, b) => sum + b.business,
+        0
+      );
+
+      if (remainingBusiness >= milestones[2].amount) {
+        timeline.push({
+          percent: 30,
+          amount: milestones[2].amount,
+          achieved: true,
+          by: "Combined Team",
+        });
+      } else {
+        timeline.push({
+          percent: 30,
+          amount: milestones[2].amount,
+          achieved: false,
+          by: null,
+        });
+      }
 
       const progress = timeline
         .filter((t) => t.achieved)
@@ -237,9 +272,7 @@ export const getAllUsersRewards = async (req, res) => {
         `
         WITH RECURSIVE branch AS (
           SELECT id, user_code FROM users WHERE id = $1
-
           UNION ALL
-
           SELECT u.id, u.user_code
           FROM users u
           JOIN branch b ON u.referred_by = b.user_code
@@ -258,11 +291,9 @@ export const getAllUsersRewards = async (req, res) => {
 
     for (const user of usersRes.rows) {
       const directRes = await pool.query(
-        `
-        SELECT id, name, lastname, user_code
-        FROM users
-        WHERE referred_by = $1
-      `,
+        `SELECT id, name, lastname, user_code
+         FROM users
+         WHERE referred_by = $1`,
         [user.user_code]
       );
 
@@ -277,6 +308,7 @@ export const getAllUsersRewards = async (req, res) => {
         });
       }
 
+      // 🔥 SORT
       branches.sort((a, b) => b.business - a.business);
 
       for (const rank of ranks) {
@@ -286,28 +318,48 @@ export const getAllUsersRewards = async (req, res) => {
           { percent: 30, amount: rank.target_amount * 0.3 },
         ];
 
-        let branchIndex = 0;
+        const timeline = [];
 
-        const timeline = milestones.map((m) => {
-          const branch = branches[branchIndex];
+        const firstLeg = branches[0];
+        if (firstLeg && firstLeg.business >= milestones[0].amount) {
+          timeline.push({
+            percent: 40,
+            amount: milestones[0].amount,
+            achieved: true,
+            by: firstLeg.name,
+          });
+        } else {
+          timeline.push({ percent: 40, amount: milestones[0].amount, achieved: false, by: null });
+        }
 
-          if (branch && branch.business >= m.amount) {
-            branchIndex++;
-            return {
-              percent: m.percent,
-              amount: m.amount,
-              achieved: true,
-              by: branch.name,
-            };
-          }
+        const secondLeg = branches[1];
+        if (secondLeg && secondLeg.business >= milestones[1].amount) {
+          timeline.push({
+            percent: 30,
+            amount: milestones[1].amount,
+            achieved: true,
+            by: secondLeg.name,
+          });
+        } else {
+          timeline.push({ percent: 30, amount: milestones[1].amount, achieved: false, by: null });
+        }
 
-          return {
-            percent: m.percent,
-            amount: m.amount,
-            achieved: false,
-            by: null,
-          };
-        });
+        const remainingLegs = branches.slice(2);
+        const remainingBusiness = remainingLegs.reduce(
+          (sum, b) => sum + b.business,
+          0
+        );
+
+        if (remainingBusiness >= milestones[2].amount) {
+          timeline.push({
+            percent: 30,
+            amount: milestones[2].amount,
+            achieved: true,
+            by: "Combined Team",
+          });
+        } else {
+          timeline.push({ percent: 30, amount: milestones[2].amount, achieved: false, by: null });
+        }
 
         const progress = timeline
           .filter((t) => t.achieved)
