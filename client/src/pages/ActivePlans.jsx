@@ -1,12 +1,15 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { toast } from "react-hot-toast";
+import { FaEllipsisV } from "react-icons/fa";
 
 const ActivePlans = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
   const [plansData, setPlansData] = useState([]);
+
+  const [menuOpen, setMenuOpen] = useState(null);
 
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState('');
@@ -21,9 +24,8 @@ const ActivePlans = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      const formatted = (res.data || []).map((item, index) => ({
-        id: item.id, // ✅ IMPORTANT
-        sno: index + 1,
+      const formatted = (res.data || []).map((item) => ({
+        id: item.id,
         user: item.user || 'N/A',
         planName: item.plan_name || 'N/A',
         depositAmount: `$${item.amount ?? 0}`,
@@ -67,19 +69,15 @@ const ActivePlans = () => {
     setShowModal(true);
   };
 
-  /* ================= STATUS CHANGE (API) ================= */
   const handleStatusChange = async (plan) => {
     try {
       const token = localStorage.getItem('token');
-
       const newStatus = plan.status === 'Active' ? 'inactive' : 'active';
 
       await axios.put(
         `http://localhost:5000/api/user-plans/${plan.id}/status`,
         { status: newStatus },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       toast.success(`Status changed to ${newStatus} ✅`);
@@ -90,7 +88,6 @@ const ActivePlans = () => {
     }
   };
 
-  /* ================= DELETE (API) ================= */
   const handleModalConfirm = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -98,12 +95,10 @@ const ActivePlans = () => {
       if (modalType === 'delete' && selectedPlan) {
         await axios.delete(
           `http://localhost:5000/api/user-plans/${selectedPlan.id}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
 
-        toast.success("Plan deleted successfully 🗑️");
+        toast.success("Plan deleted 🗑️");
         fetchAllPlans();
       }
 
@@ -116,35 +111,56 @@ const ActivePlans = () => {
   };
 
   /* ================= FILTER ================= */
-  const filteredData = plansData.filter(
-    (item) =>
-      item.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.planName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredData = useMemo(() => {
+    const q = searchTerm.toLowerCase().trim();
 
-  const indexOfLastItem = currentPage * rowsPerPage;
-  const indexOfFirstItem = indexOfLastItem - rowsPerPage;
-  const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+    return plansData.filter(
+      (item) =>
+        item.user.toLowerCase().includes(q) ||
+        item.planName.toLowerCase().includes(q)
+    );
+  }, [plansData, searchTerm]);
 
-  const handleSearch = (e) => {
-    setSearchTerm(e.target.value);
+  /* ================= PAGINATION ================= */
+  const totalPages = Math.max(1, Math.ceil(filteredData.length / rowsPerPage));
+
+  const currentItems = useMemo(() => {
+    const start = (currentPage - 1) * rowsPerPage;
+    return filteredData.slice(start, start + rowsPerPage);
+  }, [filteredData, currentPage, rowsPerPage]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
+
+  useEffect(() => {
     setCurrentPage(1);
-  };
+  }, [searchTerm, rowsPerPage]);
 
-  const handleRowsPerPageChange = (e) => {
-    setRowsPerPage(parseInt(e.target.value, 10));
-    setCurrentPage(1);
-  };
+  const getPagination = () => {
+    const pages = [];
+    const maxVisible = 5;
 
-  const handlePageChange = (pageNumber) => setCurrentPage(pageNumber);
+    let start = Math.max(currentPage - 2, 1);
+    let end = Math.min(start + maxVisible - 1, totalPages);
 
-  const handlePrevious = () => {
-    if (currentPage > 1) setCurrentPage(currentPage - 1);
-  };
+    if (end - start < maxVisible - 1) {
+      start = Math.max(end - maxVisible + 1, 1);
+    }
 
-  const handleNext = () => {
-    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+    if (start > 1) {
+      pages.push(1);
+      if (start > 2) pages.push("...");
+    }
+
+    for (let i = start; i <= end; i++) pages.push(i);
+
+    if (end < totalPages) {
+      if (end < totalPages - 1) pages.push("...");
+      pages.push(totalPages);
+    }
+
+    return pages;
   };
 
   /* ================= MODAL ================= */
@@ -152,9 +168,9 @@ const ActivePlans = () => {
     if (!showModal) return null;
 
     return (
-      <div className="ap-modal-overlay">
-        <div className="ap-modal">
-          <div className="ap-modal-header">
+      <div className="modal-overlay">
+        <div className="modal-container">
+          <div className="modal-header">
             <h3>
               {modalType === 'delete'
                 ? 'Confirm Delete'
@@ -162,72 +178,28 @@ const ActivePlans = () => {
                   ? 'Edit Plan'
                   : 'View Details'}
             </h3>
-            <button
-              className="ap-modal-close"
-              onClick={() => setShowModal(false)}
-            >
-              ×
-            </button>
+            <button onClick={() => setShowModal(false)}>✕</button>
           </div>
 
-          <div className="ap-modal-body">
+          <div className="modal-body">
             {modalType === 'delete' && (
-              <p>
-                Are you sure you want to delete the plan for{' '}
-                {selectedPlan?.user}?
-              </p>
-            )}
-
-            {modalType === 'edit' && (
-              <div className="ap-edit-form">
-                <div className="ap-form-group">
-                  <label>User:</label>
-                  <input type="text" defaultValue={selectedPlan?.user} />
-                </div>
-                <div className="ap-form-group">
-                  <label>Plan Name:</label>
-                  <input type="text" defaultValue={selectedPlan?.planName} />
-                </div>
-                <div className="ap-form-group">
-                  <label>Deposit Amount:</label>
-                  <input
-                    type="text"
-                    defaultValue={selectedPlan?.depositAmount}
-                  />
-                </div>
-                <div className="ap-form-group">
-                  <label>Daily ROI:</label>
-                  <input type="text" defaultValue={selectedPlan?.dailyROI} />
-                </div>
-              </div>
+              <p>Delete plan for {selectedPlan?.user}?</p>
             )}
 
             {modalType === 'view' && selectedPlan && (
-              <div className="ap-view-details">
-                {Object.entries(selectedPlan).map(([key, value]) => (
-                  <div key={key} className="ap-detail-row">
-                    <strong>{key}:</strong> <span>{value}</span>
-                  </div>
-                ))}
-              </div>
+              Object.entries(selectedPlan).map(([k, v]) => (
+                <div key={k} className="modal-row">
+                  <label>{k}</label>
+                  <span>{v}</span>
+                </div>
+              ))
             )}
           </div>
 
-          <div className="ap-modal-footer">
-            <button
-              className="ap-modal-btn cancel"
-              onClick={() => setShowModal(false)}
-            >
-              Cancel
-            </button>
-
+          <div className="modal-footer">
+            <button onClick={() => setShowModal(false)}>Cancel</button>
             {modalType === 'delete' && (
-              <button
-                className="ap-modal-btn confirm"
-                onClick={handleModalConfirm}
-              >
-                Delete
-              </button>
+              <button onClick={handleModalConfirm}>Delete</button>
             )}
           </div>
         </div>
@@ -236,70 +208,78 @@ const ActivePlans = () => {
   };
 
   return (
-    <div className="ap-container">
-      <div className="ap-header">
-        <h1 className="ap-title">Active Plans List</h1>
-        <div className="ap-search-box">
-          <input
-            type="text"
-            placeholder="Search..."
-            value={searchTerm}
-            onChange={handleSearch}
-          />
-        </div>
+    <div className="users-page">
+
+      <div className="users-header">
+        <h2>Active Plans</h2>
+
+        <input
+          type="text"
+          placeholder="Search..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
       </div>
 
-      <div className="ap-table-responsive">
-        <table className="ap-table">
+      <div className="table-card">
+        <table className="users-table">
           <thead>
             <tr>
               <th>S.NO</th>
               <th>USER</th>
-              <th>PLAN NAME</th>
-              <th>DEPOSIT AMOUNT</th>
-              <th>DAILY ROI</th>
+              <th>PLAN</th>
+              <th>DEPOSIT</th>
+              <th>ROI</th>
               <th>STATUS</th>
-              <th>CREATED AT</th>
+              <th>CREATED</th>
               <th>ACTIONS</th>
             </tr>
           </thead>
 
           <tbody>
             {currentItems.length > 0 ? (
-              currentItems.map((plan) => (
+              currentItems.map((plan, index) => (
                 <tr key={plan.id}>
-                  <td>{plan.sno}</td>
+                  <td>{(currentPage - 1) * rowsPerPage + index + 1}</td>
                   <td>{plan.user}</td>
                   <td>{plan.planName}</td>
                   <td>{plan.depositAmount}</td>
                   <td>{plan.dailyROI}</td>
+
                   <td>
-                    <span className={`ap-status-badge ${plan.status.toLowerCase()}`}>
+                    <span className={plan.status === "Active" ? "badge-active" : "badge-inactive"}>
                       {plan.status}
                     </span>
                   </td>
+
                   <td>{plan.createdAt}</td>
-                  <td>
-                    <div className="ap-actions-dropdown">
-                      <button className="ap-action-btn">:</button>
-                      <div className="ap-actions-menu">
-                        <button onClick={() => handleView(plan)}>👁️ View</button>
-                        <button onClick={() => handleEdit(plan)}>✏️ Edit</button>
-                        <button onClick={() => handleStatusChange(plan)}>
-                          {plan.status === 'Active'
-                            ? '⏸️ Deactivate'
-                            : '▶️ Activate'}
-                        </button>
-                        <button onClick={() => handleDelete(plan)}>🗑️ Delete</button>
+
+                  <td className="action-cell">
+                    <FaEllipsisV
+                      onClick={() =>
+                        setMenuOpen(menuOpen === plan.id ? null : plan.id)
+                      }
+                    />
+
+                    {menuOpen === plan.id && (
+                      <div className="action-dropdown">
+                        <div onClick={() => handleView(plan)}>View</div>
+                        <div onClick={() => handleEdit(plan)}>Edit</div>
+                        <div onClick={() => handleStatusChange(plan)}>
+                          {plan.status === 'Active' ? 'Deactivate' : 'Activate'}
+                        </div>
+                        <div className="delete" onClick={() => handleDelete(plan)}>
+                          Delete
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="8" className="ap-no-data">
-                  No active plans found
+                <td colSpan="8" style={{ textAlign: "center" }}>
+                  No plans found
                 </td>
               </tr>
             )}
@@ -307,25 +287,48 @@ const ActivePlans = () => {
         </table>
       </div>
 
-      <div className="ap-table-footer">
-        <div className="ap-rows-selector">
-          <span>Rows per page:</span>
-          <select value={rowsPerPage} onChange={handleRowsPerPageChange}>
-            <option value={5}>5</option>
+      {/* ✅ SAME PAGINATION */}
+      <div className="pagination">
+        <div className="usrDeposit__rows">
+          Rows per page
+          <select
+            value={rowsPerPage}
+            onChange={(e) => setRowsPerPage(Number(e.target.value))}
+          >
             <option value={10}>10</option>
             <option value={25}>25</option>
             <option value={50}>50</option>
           </select>
         </div>
 
-        <div className="ap-pagination">
-          <button onClick={handlePrevious}>Previous</button>
-          {[...Array(totalPages)].map((_, i) => (
-            <button key={i} onClick={() => handlePageChange(i + 1)}>
-              {i + 1}
-            </button>
-          ))}
-          <button onClick={handleNext}>Next</button>
+        <div>
+          <button
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+          >
+            {"<"}
+          </button>
+
+          {getPagination().map((p, i) =>
+            p === "..." ? (
+              <span key={i}>...</span>
+            ) : (
+              <button
+                key={i}
+                className={currentPage === p ? "active" : ""}
+                onClick={() => setCurrentPage(p)}
+              >
+                {p}
+              </button>
+            )
+          )}
+
+          <button
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+          >
+            {">"}
+          </button>
         </div>
       </div>
 

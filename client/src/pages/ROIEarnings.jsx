@@ -5,7 +5,7 @@ const ROIEarnings = () => {
   const [data, setData] = useState([]);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [loading, setLoading] = useState(true);
 
   // ✅ FETCH DATA
@@ -169,9 +169,9 @@ const ROIEarnings = () => {
               setPage(1);
             }}
           >
-            <option value={5}>5</option>
             <option value={10}>10</option>
             <option value={25}>25</option>
+            <option value={50}>50</option>
           </select>
         </div>
 
